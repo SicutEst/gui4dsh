@@ -4,6 +4,7 @@ import { useI18n, relTime } from '../i18n';
 import { dshCall } from '../api';
 import { AssistantMessageView, ContextRow, StreamingView, ToolCard, UserBubble } from './blocks';
 import { TrajectoryView } from './TrajectoryView';
+import { FileSidebar } from './FileSidebar';
 import { deriveDeliverables } from '../store';
 import { Icon } from './Icon';
 
@@ -104,6 +105,33 @@ export function ChatView() {
     () => (slashQuery === null ? [] : st.skills.filter((s) => s.name.toLowerCase().includes(slashQuery)).slice(0, 8)),
     [slashQuery, st.skills],
   );
+
+  // @-reference trigger: browse workspaceFiles listings, insert dsh's `@path` grammar
+  const atToken = useMemo(() => {
+    const m = /(^|\s)@([^@\n]*)$/.exec(input);
+    return m ? m[2] : null;
+  }, [input]);
+  const atDir = atToken !== null ? atToken.slice(0, atToken.lastIndexOf('/') + 1) : '';
+  const atFilter = atToken !== null ? atToken.slice(atToken.lastIndexOf('/') + 1).toLowerCase() : '';
+  const atCandidates = useMemo(() => {
+    if (atToken === null) return [];
+    const entries = st.fileListings[atDir];
+    if (!entries) return [];
+    return entries
+      .filter((e) => e.name.toLowerCase().includes(atFilter))
+      .slice(0, 8);
+  }, [atToken, atDir, atFilter, st.fileListings]);
+  useEffect(() => {
+    if (atToken !== null && activeId && st.fileListings[atDir] === undefined) void st.listFiles(activeId, atDir);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [atToken, atDir]);
+  const applyAt = (entry: { name: string; type: string }) => {
+    const isDir = entry.type === 'directory';
+    const rel = atDir + entry.name + (isDir ? '/' : '');
+    const quoted = /\s/.test(rel) ? `@"${rel}"` : `@${rel}`;
+    setInput((prev) => prev.replace(/(^|\s)@([^@\n]*)$/, (_m, pre) => pre + quoted + (isDir ? '' : ' ')));
+    taRef.current?.focus();
+  };
 
   if (!activeId || !session) {
     return (
@@ -216,6 +244,13 @@ export function ChatView() {
           {session.agentPreset ? `· ${session.agentPreset}` : ''}
         </div>
         <div style={{ flex: 1 }} />
+        <button
+          className={`btn sm ${st.filePanel ? 'primary' : ''}`}
+          title={t('files.title')}
+          onClick={() => st.toggleFilePanel()}
+        >
+          <Icon name="folder" size={13} />
+        </button>
         {schedules.length > 0 && (
           <div style={{ position: 'relative' }}>
             <button className="btn sm" title={t('sched.title')} onClick={() => setSchedOpen(!schedOpen)}>
@@ -290,6 +325,8 @@ export function ChatView() {
         </button>
       </div>
 
+      <div className="chat-body-row">
+      <div className="chat-main">
       {showTraj ? (
         <div className="chat-scroll traj-host">
           <TrajectoryView
@@ -475,6 +512,17 @@ export function ChatView() {
               <div key={s.name} className="slash-item" onClick={() => applySlash(s.name)}>
                 <span className="s-name mono">/{s.name}</span>
                 <span className="s-desc">{s.description}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {atCandidates.length > 0 && (
+          <div className="slash-menu at-menu">
+            {atCandidates.map((e) => (
+              <div key={e.name} className="slash-item" onClick={() => applyAt(e)}>
+                <Icon name={e.type === 'directory' ? 'folder' : 'file'} size={12} />
+                <span className="s-name mono">{e.name}</span>
+                <span className="s-desc">{e.type === 'directory' ? (locale === 'zh' ? '文件夹' : 'folder') : fmtSize(e.size)}</span>
               </div>
             ))}
           </div>
@@ -695,6 +743,9 @@ export function ChatView() {
           </div>
         </div>
       </div>
+      </div>
+      {st.filePanel && activeId && <FileSidebar sessionId={activeId} />}
+      </div>
     </div>
   );
 }
@@ -710,6 +761,13 @@ function noticeText(item: { text?: string; level?: string }, locale: string): st
 function fmtK(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return String(n);
+}
+
+function fmtSize(n?: number): string {
+  if (typeof n !== 'number') return '';
+  if (n < 1024) return `${n}B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)}K`;
+  return `${(n / 1024 / 1024).toFixed(1)}M`;
 }
 
 export { relTime };

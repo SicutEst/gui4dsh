@@ -378,6 +378,10 @@ interface AppState {
   newTaskModal: boolean;
   qrModal: string | null;
   remoteOpen: boolean;
+  filePanel: boolean;
+  fileListings: Record<string, Array<{ name: string; type: string; size?: number }>>;
+  filePreview: { path: string; loading: boolean; text?: string; bytes?: number; err?: string } | null;
+  filePreviewSid: string | null;
 
   boot: () => Promise<void>;
   resyncAll: () => Promise<void>;
@@ -402,6 +406,9 @@ interface AppState {
   selectModel: (sid: string, provider: string, model: string, reasoningEffort?: string) => Promise<void>;
   queueAction: (sid: string, itemId: string, action: any) => Promise<void>;
   rate: (sid: string, messageId: string, rating: 'positive' | 'negative') => Promise<void>;
+  toggleFilePanel: () => void;
+  listFiles: (sid: string, dir: string) => Promise<void>;
+  openFilePreview: (sid: string, path: string, bytes?: number) => Promise<void>;
   respondApproval: (sid: string, outcome: 'allowed-once' | 'rejected') => Promise<void>;
   respondQuestion: (sid: string, answer: { answers: Array<{ id: string; selected: string[]; custom?: string }> }) => Promise<void>;
   newTask: (opts: { workspaceId?: string; cwd?: string; agentPreset?: string; prompt?: string }) => Promise<string | null>;
@@ -525,6 +532,10 @@ export const useStore = create<AppState>()(
       workspaces: [],
       archived: [],
       jobs: {},
+      filePanel: false,
+      fileListings: {},
+      filePreview: null,
+      filePreviewSid: null,
       taskMeta: {},
       taskGroups: [],
       skills: [],
@@ -913,6 +924,46 @@ export const useStore = create<AppState>()(
         const r = await dshCall<any>(retract ? 'messageFeedback.delete' : 'messageFeedback.put', body);
         const biz = r.ok ? ((r.value as any)?.ok === false ? (r.value as any).error : null) : r.error;
         if (biz) get().toast('error', biz.message || 'feedback failed');
+      },
+
+      toggleFilePanel: () => {
+        mutate((s) => {
+          s.filePanel = !s.filePanel;
+          if (!s.filePanel) s.filePreview = null;
+        });
+      },
+
+      listFiles: async (sid, dir) => {
+        mutate((s) => void (s.fileListings[dir] = [])); // mark loading with empty
+        const r = await dshCall<{ entries?: Array<{ name: string; type: string; size?: number }> }>('workspaceFiles.list', {
+          workspaceFileScopeId: sid,
+          path: dir || '.',
+        });
+        if (!r.ok) {
+          get().toast('error', r.error?.message || 'list failed');
+          return;
+        }
+        const entries = (r.value?.entries || []).slice().sort((a, b) =>
+          a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'directory' ? -1 : 1,
+        );
+        mutate((s) => void (s.fileListings[dir] = entries));
+      },
+
+      openFilePreview: async (sid, path, bytes) => {
+        mutate((s) => void (s.filePreview = { path, loading: true }));
+        mutate((s) => void (s.filePreviewSid = sid));
+        const MAX = 200_000;
+        const want = typeof bytes === 'number' && bytes > 0 ? Math.min(bytes, MAX) : MAX;
+        const r = await dshCall<{ text?: string; bytes?: number; offset?: number }>('workspaceFiles.read', {
+          workspaceFileScopeId: sid,
+          path,
+          range: { offset: 1, length: want },
+        });
+        mutate((s) => {
+          if (s.filePreview?.path !== path) return;
+          if (!r.ok) s.filePreview = { path, loading: false, err: r.error?.message || 'read failed' };
+          else s.filePreview = { path, loading: false, text: r.value?.text, bytes: r.value?.bytes };
+        });
       },
 
       respondApproval: async (sid, outcome) => {

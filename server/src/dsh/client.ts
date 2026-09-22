@@ -199,10 +199,11 @@ class DshClient {
     const timer = setTimeout(() => controller.abort(), 120_000);
     try {
       await ensureAuthCookie();
-      // attempt 0: {_request}, 1: {request}, 2: {} (no-parameter endpoints)
+      // attempt 0: {_request}, 1: {request}, 2: flat named fields, 3: {} (no-parameter endpoints)
       let args: unknown;
       if (argsTry === 0) args = { _request: payload ?? {} };
       else if (argsTry === 1) args = { request: payload ?? {} };
+      else if (argsTry === 2) args = payload ?? {};
       else args = {};
       const res = await fetch(`${dshBaseUrl}/api/${endpoint}`, {
         method: 'POST',
@@ -217,12 +218,12 @@ class DshClient {
       const msg = (await res.json().catch(() => null)) as any;
       const result = msg?.result;
       if (result === undefined) return { ok: false, error: { code: 'internal', message: `malformed response (${res.status})` } };
-      if (!result.ok && result.error?.code === 'gateway/arguments-invalid' && argsTry < 2) {
+      if (!result.ok && result.error?.code === 'gateway/arguments-invalid' && argsTry < 3) {
         const m = String(result.error.message || '');
         const missing = /missing "([a-zA-Z_]+)"/.exec(m);
         const wantsOtherName = (missing && missing[1] !== '_request') || m.includes('unexpected "_request"');
-        // both named forms rejected and the complaint is about an unexpected field -> try empty args
-        const wantsEmpty = argsTry === 1 && m.includes('unexpected "request"');
+        // both named forms rejected and the complaint is about an unexpected field -> try flat, then empty args
+        const wantsEmpty = argsTry === 2 && (m.includes('unexpected') && !missing);
         if (wantsOtherName || wantsEmpty) return this.unary<T>(endpoint, payload, argsTry + 1);
       }
       markUp();
