@@ -1,0 +1,36 @@
+{
+  "name": "gui4dsh",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Web frontend for dsh (DeepSeek Harness) with mobile remote access",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "build": "npm run build -w web && npm run build -w server",
+    "start": "npm run start -w server"
+  },
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek",
+    "harness",
+    "web",
+    "frontend",
+    "mobile",
+    "remote",
+    "self-hosted"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/USER/gui4dsh.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/USER/gui4dsh/issues"
+  },
+  "homepage": "https://github.com/USER/gui4dsh#readme"
+}
