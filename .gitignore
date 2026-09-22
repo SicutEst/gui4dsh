@@ -12,3 +12,5 @@ service/*.local
 service/gui4dsh-service.exe
 service/gui4dsh-service.xml
 service/logs
+*.mjs
+!pack.mjs
