@@ -44,10 +44,12 @@ async function tick(): Promise<void> {
   try {
     const s = st();
     if (!s.enabled) return;
-    // completion check for the running task
+    // completion check for the running task — but never before the turn has
+    // had a fair chance to start (a tick inside the accept→turn-start window
+    // would otherwise see running:false and mark it done prematurely)
     const running = s.tasks.find((t) => t.status === 'running');
     if (running) {
-      if (running.sessionId) {
+      if (running.sessionId && running.startedAt && Date.now() - running.startedAt > 90_000) {
         const r = await dsh.call<{ items: Array<{ sessionId: string; running?: boolean }> }>('session.list', {});
         const item = r.ok ? (r.value.items || []).find((x) => x.sessionId === running.sessionId) : undefined;
         if (item && !item.running) {

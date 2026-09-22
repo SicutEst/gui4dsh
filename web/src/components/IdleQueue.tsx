@@ -95,7 +95,7 @@ export function IdleQueueCard() {
             <select className="input" style={{ width: 170 }} value={cwd} onChange={(e) => setCwd(e.target.value)}>
               <option value="">{t('idle.anyWorkspace')}</option>
               {workspaces.map((w) => (
-                <option key={w.workspaceId} value={(w as any).cwd || w.title}>{w.title}</option>
+                <option key={w.workspaceId} value={w.path}>{w.title}</option>
               ))}
             </select>
             <button className="btn sm primary" onClick={() => void add()} disabled={!prompt.trim()}>

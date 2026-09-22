@@ -73,6 +73,11 @@ export function ChatView() {
     try { r.start(); setRecording(true); } catch { recRef.current = null; }
   };
 
+  // leaving the chat (view switch / unmount) must release the microphone
+  useEffect(() => () => {
+    try { recRef.current?.stop(); } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     if (!jobsOpen) return;
     const t = setInterval(() => setJobTick((x) => x + 1), 1000);

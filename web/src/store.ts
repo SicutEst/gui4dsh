@@ -333,8 +333,11 @@ export function deriveDeliverables(traj: TrajEv[]): Map<number, DeliverableFile[
       try {
         args = typeof d.args === 'string' ? JSON.parse(d.args) : d.args;
       } catch {
-        continue;
+        // truncated args JSON: still try to recover the path field for deliverables
+        const m = /"(?:file_path|path)"\s*:\s*"([^"]+)"/.exec(String(d.args || ''));
+        if (m) args = { file_path: m[1] };
       }
+      if (!args) continue;
       const path = args?.file_path || args?.path || args?.command?.path;
       const cmd = args?.command?.command || args?.command;
       const op = d.name === 'str_replace_editor' && cmd === 'view' ? '' : String(cmd || d.name);
