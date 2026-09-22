@@ -782,3 +782,8 @@ textarea.json {
 .send-btn.voice:hover { border-color: var(--accent); color: var(--accent); }
 .send-btn.voice.rec { border-color: var(--red, #e05252); color: var(--red, #e05252); animation: traj-pulse 1.2s ease-in-out infinite; }
 .mem-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 16px; }
+
+/* ---- idle queue ---- */
+.idle-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; }
+.idle-row .idle-prompt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.idle-row .idle-meta { font-size: 11px; color: var(--faint); flex-shrink: 0; }

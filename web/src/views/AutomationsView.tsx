@@ -3,6 +3,7 @@ import { fe } from '../api';
 import { useStore } from '../store';
 import { useI18n, relTime, fmtDateTime } from '../i18n';
 import { Icon } from '../components/Icon';
+import { IdleQueueCard } from '../components/IdleQueue';
 import type { Automation, AutomationRun } from '../types';
 
 type CronMode = 'everyNMin' | 'hourlyAt' | 'daily' | 'weekly' | 'custom';
@@ -132,6 +133,7 @@ export function AutomationsView() {
         <button className="btn primary" onClick={() => setDraft(emptyDraft())}><Icon name="plus" size={14} /> {t('auto.new')}</button>
       </div>
       <div className="view-body narrow">
+        <IdleQueueCard />
         {automations.length === 0 && !draft && (
           <div style={{ color: 'var(--faint)', padding: '30px 0', textAlign: 'center' }}>{t('auto.noAutomations')}</div>
         )}

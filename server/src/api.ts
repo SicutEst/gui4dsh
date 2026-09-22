@@ -7,6 +7,7 @@ import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
 import { webDist, dshHome } from './config.js';
 import * as memory from './memory.js';
+import * as idle from './idle.js';
 import { store } from './store.js';
 import { bus } from './bus.js';
 import { dsh } from './dsh/client.js';
@@ -294,6 +295,24 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
   app.post('/api/fe/memory/toggle', async (req) => {
     const { enabled } = (req.body || {}) as { enabled?: boolean };
     return memory.setMemoryEnabled(!!enabled);
+  });
+
+  // idle-time task queue
+  app.get('/api/fe/idle', async () => idle.idleState());
+  app.post('/api/fe/idle/config', async (req) => {
+    const { enabled, idleMinutes } = (req.body || {}) as { enabled?: boolean; idleMinutes?: number };
+    idle.setIdleConfig(!!enabled, idleMinutes);
+    return idle.idleState();
+  });
+  app.post('/api/fe/idle/task', async (req) => {
+    const { prompt, cwd } = (req.body || {}) as { prompt?: string; cwd?: string };
+    if (!prompt || !String(prompt).trim()) return { ok: false, error: 'empty prompt' };
+    return { ok: true, task: idle.addIdleTask(String(prompt), cwd ? String(cwd) : undefined) };
+  });
+  app.delete('/api/fe/idle/task', async (req) => {
+    const id = (req.query as { id?: string }).id || '';
+    idle.removeIdleTask(String(id));
+    return { ok: true };
   });
   app.put('/api/fe/settings', async (req) => {
     const body = req.body as Record<string, unknown>;

@@ -87,6 +87,14 @@ export const fe = {
     req<{ ok: boolean; error?: string }>(`/api/fe/memory/file?name=${encodeURIComponent(name)}`, { method: 'DELETE' }),
   memoryToggle: (enabled: boolean) =>
     req<{ ok: boolean; error?: string }>('/api/fe/memory/toggle', { method: 'POST', body: JSON.stringify({ enabled }) }),
+  idleState: () =>
+    req<{ enabled: boolean; idleMinutes: number; tasks: Array<{ id: string; prompt: string; cwd?: string; createdAt: number; status: string; sessionId?: string; startedAt?: number; error?: string }> }>('/api/fe/idle'),
+  idleConfig: (enabled: boolean, idleMinutes?: number) =>
+    req<{ enabled: boolean; idleMinutes: number; tasks: unknown[] }>('/api/fe/idle/config', { method: 'POST', body: JSON.stringify({ enabled, idleMinutes }) }),
+  idleAddTask: (prompt: string, cwd?: string) =>
+    req<{ ok: boolean; task?: { id: string } }>('/api/fe/idle/task', { method: 'POST', body: JSON.stringify({ prompt, cwd }) }),
+  idleRemoveTask: (id: string) =>
+    req<{ ok: boolean }>(`/api/fe/idle/task?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
   duckdnsBind: (token: string, domain: string, ip?: string, ipv6?: string) =>
     req<{ ok: boolean; response?: string; error?: string }>('/api/fe/duckdns/bind', { method: 'POST', body: JSON.stringify({ token, domain, ip, ipv6 }) }),
   duckdnsCheck: (host: string) =>
