@@ -20,7 +20,7 @@ import type {
   WorkspaceView,
 } from './types';
 
-export type ViewName = 'chat' | 'search' | 'automations' | 'skills' | 'projects' | 'stats' | 'hooks' | 'settings';
+export type ViewName = 'chat' | 'search' | 'automations' | 'skills' | 'projects' | 'stats' | 'hooks' | 'memory' | 'settings';
 
 export interface StreamPart {
   kind: 'text' | 'reasoning' | 'tool-call';

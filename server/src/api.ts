@@ -6,6 +6,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
 import { webDist, dshHome } from './config.js';
+import * as memory from './memory.js';
 import { store } from './store.js';
 import { bus } from './bus.js';
 import { dsh } from './dsh/client.js';
@@ -275,6 +276,25 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
   });
 
   app.get('/api/fe/settings', async () => store.data.settings);
+
+  // cross-session persistent memory (markdown files + AGENTS.md block)
+  app.get('/api/fe/memory', async () => ({
+    enabled: memory.memoryEnabled(),
+    dir: memory.memoryDirPath(),
+    ...memory.listMemory(),
+  }));
+  app.put('/api/fe/memory/file', async (req) => {
+    const { name, content } = (req.body || {}) as { name?: string; content?: string };
+    return memory.writeMemoryFile(String(name || ''), String(content ?? ''));
+  });
+  app.delete('/api/fe/memory/file', async (req) => {
+    const name = (req.query as { name?: string }).name || '';
+    return memory.deleteMemoryFile(String(name));
+  });
+  app.post('/api/fe/memory/toggle', async (req) => {
+    const { enabled } = (req.body || {}) as { enabled?: boolean };
+    return memory.setMemoryEnabled(!!enabled);
+  });
   app.put('/api/fe/settings', async (req) => {
     const body = req.body as Record<string, unknown>;
     const s = store.data.settings as unknown as Record<string, unknown>;

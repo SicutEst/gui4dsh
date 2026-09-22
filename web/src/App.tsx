@@ -12,6 +12,7 @@ import { SearchView } from './views/SearchView';
 import { AutomationsView } from './views/AutomationsView';
 import { SkillsView } from './views/SkillsView';
 import { ProjectsView } from './views/ProjectsView';
+import { MemoryView } from './views/MemoryView';
 import { StatsView } from './views/StatsView';
 import { HooksView } from './views/HooksView';
 import { SettingsView } from './views/SettingsView';
@@ -326,6 +327,7 @@ export function App() {
           {view === 'automations' && <AutomationsView />}
           {view === 'skills' && <SkillsView />}
           {view === 'projects' && <ProjectsView />}
+          {view === 'memory' && <MemoryView />}
           {view === 'stats' && <StatsView />}
           {view === 'hooks' && <HooksView />}
           {view === 'settings' && <SettingsView />}

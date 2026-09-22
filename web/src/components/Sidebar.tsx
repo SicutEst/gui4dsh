@@ -246,6 +246,7 @@ export function Sidebar() {
         <NavBtn icon="clock" label={t('nav.automations')} active={view === 'automations'} onClick={() => st.setView('automations')} />
         <NavBtn icon="command" label={t('nav.skills')} active={view === 'skills'} onClick={() => st.setView('skills')} />
         <NavBtn icon="folder" label={t('nav.projects')} active={view === 'projects'} onClick={() => st.setView('projects')} />
+        <NavBtn icon="brain" label={t('nav.memory')} active={view === 'memory'} onClick={() => st.setView('memory')} />
       </nav>
 
       <div className="task-scroll">

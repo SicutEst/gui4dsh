@@ -747,3 +747,32 @@ textarea.json {
   .chat-body-row { position: relative; }
   .file-panel { position: absolute; right: 0; top: 0; bottom: 0; width: min(86vw, 320px); z-index: 20; box-shadow: var(--shadow); }
 }
+
+/* ---- memory view ---- */
+.mem-banner {
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px; margin-bottom: 12px;
+  border: 1px solid var(--border); border-radius: 10px; font-size: 12.5px; color: var(--faint);
+  background: var(--surface);
+}
+.mem-banner.ok { border-color: rgba(33,179,132,0.45); color: #1d8a63; }
+.mem-layout { display: flex; gap: 12px; align-items: stretch; min-height: 0; flex: 1; }
+.mem-list { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+.mem-row {
+  display: flex; align-items: center; gap: 7px; padding: 8px 10px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 12.5px;
+}
+.mem-row:hover { border-color: var(--accent); }
+.mem-row.sel { border-color: var(--accent); background: var(--accent-soft); }
+.mem-row .m-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mem-row .m-hook { color: var(--faint); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.mem-editor { flex: 1; min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.mem-editor-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.mem-text {
+  flex: 1; border: none; outline: none; resize: none; padding: 12px; font-size: 12.5px; line-height: 1.6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: transparent; color: var(--text);
+}
+.mem-empty { padding: 20px; font-size: 12.5px; color: var(--faint); text-align: center; }
+@media (max-width: 760px) {
+  .mem-layout { flex-direction: column; }
+  .mem-list { width: auto; max-height: 200px; }
+}

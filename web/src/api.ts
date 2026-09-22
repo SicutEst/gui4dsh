@@ -80,6 +80,13 @@ export const fe = {
   autoPair: () => req<{ ok: boolean; token?: string }>('/api/fe/auto-pair', { method: 'POST', body: JSON.stringify({}) }),
   settings: () => req<import('./types').GatewaySettings>('/api/fe/settings'),
   pushTest: () => req<{ ok: boolean; error?: string }>('/api/fe/push/test', { method: 'POST', body: '{}' }),
+  memoryList: () => req<{ enabled: boolean; dir: string; files: Array<{ name: string; content: string }> }>('/api/fe/memory'),
+  memoryWrite: (name: string, content: string) =>
+    req<{ ok: boolean; error?: string }>('/api/fe/memory/file', { method: 'PUT', body: JSON.stringify({ name, content }) }),
+  memoryDelete: (name: string) =>
+    req<{ ok: boolean; error?: string }>(`/api/fe/memory/file?name=${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  memoryToggle: (enabled: boolean) =>
+    req<{ ok: boolean; error?: string }>('/api/fe/memory/toggle', { method: 'POST', body: JSON.stringify({ enabled }) }),
   duckdnsBind: (token: string, domain: string, ip?: string, ipv6?: string) =>
     req<{ ok: boolean; response?: string; error?: string }>('/api/fe/duckdns/bind', { method: 'POST', body: JSON.stringify({ token, domain, ip, ipv6 }) }),
   duckdnsCheck: (host: string) =>
