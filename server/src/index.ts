@@ -93,6 +93,9 @@ async function main(): Promise<void> {
     if (frame?.type === 'session/event' && frame.sessionId && frame.event) {
       trackSessionEvent(frame.sessionId, frame.event);
       if (frame.event.type === 'turn/end') {
+        // history replay (follow snapshot) re-emits old events: only push live ones
+        const evTime = frame.event.time;
+        if (typeof evTime === 'number' && Math.abs(Date.now() - evTime) > 2 * 60_000) return;
         const reason = (frame.event.data as { reason?: { kind?: string } } | undefined)?.reason;
         void pushTurnDone(frame.sessionId, reason?.kind);
       }
@@ -145,7 +148,7 @@ async function main(): Promise<void> {
   const pairingUrl = `${localUrl}/#token=${store.data.token}`;
   console.log(`\n[gateway] listening on ${localUrl} (LAN: 0.0.0.0:${port})`);
   console.log(`[gateway] pairing token: ${store.data.token}`);
-  console.log(`[gateway] 6-digit pairing code: ${apiGetPairCode() ?? '(generate in Settings → Remote access)'}\n`);
+  console.log(`[gateway] 6-digit pairing code: ${apiGetPairCode().code ?? '(generate in Settings → Remote access)'}\n`);
 
   for (const ip of lanIps()) {
     const url = `http://${ip}:${port}/#token=${store.data.token}`;

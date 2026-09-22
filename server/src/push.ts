@@ -76,26 +76,40 @@ const recentPushed = new Map<string, number>();
 /** One turn finished (turn/end on a followed session). */
 export async function pushTurnDone(sessionId: string, reasonKind?: string): Promise<void> {
   const c = pushCfg();
-  if (c.channel === 'off' || !c.onTurnEnd || !cfgReady(c)) return;
+  if (c.channel === 'off') return;
+  if (!c.onTurnEnd) return;
+  if (!cfgReady(c)) {
+    console.log(`[push] turn done ${sessionId.slice(8, 18)} dropped: channel '${c.channel}' not configured (missing key/topic)`);
+    return;
+  }
   const last = recentPushed.get(sessionId) || 0;
-  if (Date.now() - last < 90_000) return;
+  if (Date.now() - last < 90_000) {
+    console.log(`[push] turn done ${sessionId.slice(8, 18)} skipped (dedup window)`);
+    return;
+  }
   recentPushed.set(sessionId, Date.now());
 
   const title = await sessionTitleOf(sessionId);
   const interrupted = reasonKind === 'interrupted';
-  await deliver(
+  const r = await deliver(
     interrupted ? `任务已停止：${title}` : `任务完成：${title}`,
     interrupted ? '会话被中断' : 'dsh 已完成本轮任务，点开查看结果',
     pushUrl(sessionId),
   );
+  console.log(`[push] turn done ${sessionId.slice(8, 18)} (${reasonKind || 'end'}) -> ${r.ok ? 'sent' : `FAILED: ${r.error}`}`);
 }
 
 /** dsh is asking the user to approve a tool call. */
 export async function pushApproval(sessionId: string, summary: string): Promise<void> {
   const c = pushCfg();
-  if (c.channel === 'off' || !c.onApproval || !cfgReady(c)) return;
+  if (c.channel === 'off' || !c.onApproval) return;
+  if (!cfgReady(c)) {
+    console.log(`[push] approval ${sessionId.slice(8, 18)} dropped: channel '${c.channel}' not configured`);
+    return;
+  }
   const title = await sessionTitleOf(sessionId);
-  await deliver(`需要审批：${title}`, summary || 'dsh 请求执行一个工具调用，请打开处理', pushUrl(sessionId));
+  const r = await deliver(`需要审批：${title}`, summary || 'dsh 请求执行一个工具调用，请打开处理', pushUrl(sessionId));
+  console.log(`[push] approval ${sessionId.slice(8, 18)} -> ${r.ok ? 'sent' : `FAILED: ${r.error}`}`);
 }
 
 export async function pushTest(): Promise<{ ok: boolean; error?: string }> {
