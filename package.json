@@ -26,11 +26,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/USER/gui4dsh.git"
+    "url": "git+https://github.com/SicutEst/gui4dsh.git"
   },
-  "author": "",
+  "author": "SicutEst",
   "bugs": {
-    "url": "https://github.com/USER/gui4dsh/issues"
+    "url": "https://github.com/SicutEst/gui4dsh/issues"
   },
-  "homepage": "https://github.com/USER/gui4dsh#readme"
+  "homepage": "https://github.com/SicutEst/gui4dsh#readme"
 }
