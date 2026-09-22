@@ -696,3 +696,14 @@ textarea.json {
 .d-chip .d-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .d-chip .d-op { color: var(--faint); font-size: 10px; }
 .d-chip svg { color: #21b384; flex-shrink: 0; }
+
+/* ---- message feedback + misc ---- */
+.msg-foot { display: flex; align-items: center; gap: 10px; margin-top: 4px; min-height: 24px; }
+.rate-strip { display: inline-flex; gap: 2px; }
+.rate-btn {
+  border: none; background: transparent; color: var(--faint); cursor: pointer;
+  padding: 3px 5px; border-radius: 6px; display: inline-flex; align-items: center;
+}
+.rate-btn:hover { background: var(--bg-hover, rgba(127,127,150,0.08)); color: var(--text); }
+.rate-btn.pos { color: #1d8a63; }
+.rate-btn.neg { color: var(--red, #e05252); }

@@ -6,7 +6,8 @@ type IconName =
   | 'check' | 'x' | 'copy' | 'pin' | 'fork' | 'archive' | 'pencil' | 'trash' | 'play' | 'refresh'
   | 'eye' | 'shield' | 'alert' | 'info' | 'chevronDown' | 'chevronRight' | 'clock' | 'calendar'
   | 'list' | 'external' | 'sun' | 'moon' | 'lock' | 'home' | 'activity' | 'message' | 'phone'
-  | 'download' | 'grid' | 'link' | 'sparkles' | 'flag' | 'wrench' | 'code';
+  | 'download' | 'grid' | 'link' | 'sparkles' | 'flag' | 'wrench' | 'code'
+  | 'thumbUp' | 'thumbDown' | 'timer';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   plus: <path d="M12 5v14M5 12h14" />,
@@ -62,6 +63,9 @@ const PATHS: Record<IconName, React.ReactNode> = {
   flag: <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><path d="M4 22v-7" /></>,
   wrench: <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />,
   code: <><path d="M16 18l6-6-6-6M8 6l-6 6 6 6" /></>,
+  thumbUp: <><path d="M7 10v12" /><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" /></>,
+  thumbDown: <><path d="M17 14V2" /><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z" /></>,
+  timer: <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5M9 2h6" /></>,
 };
 
 export function Icon({ name, size = 16, className, style }: { name: IconName; size?: number; className?: string; style?: React.CSSProperties }) {

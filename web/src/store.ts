@@ -79,6 +79,7 @@ interface ChatState {
   model?: { provider?: string; model?: string };
   streamIdx: Record<string, number>;
   traj: TrajEv[];
+  feedback: Record<string, { rating: 'positive' | 'negative'; version: string }>;
 }
 
 function newChat(): ChatState {
@@ -95,6 +96,7 @@ function newChat(): ChatState {
     projValues: {},
     streamIdx: {},
     traj: [],
+    feedback: {},
   };
 }
 
@@ -279,6 +281,16 @@ function foldEvent(chat: WritableDraft<ChatState>, ev: SessionEvent): void {
     case 'todo/write':
       chat.todos = ev.data?.todos || [];
       break;
+    case 'feedback/message-put': {
+      const it = ev.data?.item;
+      if (it?.messageId && (it.rating === 'positive' || it.rating === 'negative')) {
+        chat.feedback[it.messageId] = { rating: it.rating, version: it.version };
+      }
+      break;
+    }
+    case 'feedback/message-delete':
+      if (ev.data?.messageId) delete chat.feedback[ev.data.messageId];
+      break;
     case 'request/header': {
       const cfg = ev.data?.header?.config || {};
       chat.model = { provider: cfg.provider, model: cfg.model };
@@ -389,6 +401,7 @@ interface AppState {
   setGroup: (sid: string, groupId: string | null) => Promise<void>;
   selectModel: (sid: string, provider: string, model: string, reasoningEffort?: string) => Promise<void>;
   queueAction: (sid: string, itemId: string, action: any) => Promise<void>;
+  rate: (sid: string, messageId: string, rating: 'positive' | 'negative') => Promise<void>;
   respondApproval: (sid: string, outcome: 'allowed-once' | 'rejected') => Promise<void>;
   respondQuestion: (sid: string, answer: { answers: Array<{ id: string; selected: string[]; custom?: string }> }) => Promise<void>;
   newTask: (opts: { workspaceId?: string; cwd?: string; agentPreset?: string; prompt?: string }) => Promise<string | null>;
@@ -616,6 +629,18 @@ export const useStore = create<AppState>()(
                 }
               }
               if (c.minSeq === Number.MAX_SAFE_INTEGER) c.minSeq = 0;
+            });
+            // seed message feedback (assistant message ratings) for this session
+            void dshCall<any>('messageFeedback.list', { sessionId: sid }).then((r) => {
+              if (!r.ok) return;
+              const inner = r.value as any;
+              if (inner?.ok === false) return;
+              const items: Array<{ messageId: string; rating: 'positive' | 'negative'; version: string }> = inner?.items || inner?.value?.items || [];
+              mutate((s) => {
+                const c = ensureChat(s, sid);
+                c.feedback = {};
+                for (const it of items) c.feedback[it.messageId] = { rating: it.rating, version: it.version };
+              });
             });
           } else {
             mutate((s) => {
@@ -878,6 +903,16 @@ export const useStore = create<AppState>()(
 
       queueAction: async (sid, itemId, action) => {
         await dshCall('session.updateQueue', { sessionId: sid, itemId, action });
+      },
+
+      rate: async (sid, messageId, rating) => {
+        const cur = get().chats[sid]?.feedback[messageId];
+        const retract = !!cur && cur.rating === rating;
+        const body: Record<string, unknown> = { sessionId: sid, messageId, ifVersion: cur?.version ?? null };
+        if (!retract) body.rating = rating;
+        const r = await dshCall<any>(retract ? 'messageFeedback.delete' : 'messageFeedback.put', body);
+        const biz = r.ok ? ((r.value as any)?.ok === false ? (r.value as any).error : null) : r.error;
+        if (biz) get().toast('error', biz.message || 'feedback failed');
       },
 
       respondApproval: async (sid, outcome) => {

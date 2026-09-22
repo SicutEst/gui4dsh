@@ -16,6 +16,8 @@ export function ChatView() {
   const models = useStore((s) => (s.activeId ? s.modelsCache[s.activeId] : undefined));
   const workspaces = useStore((s) => s.workspaces);
   const jobs = useStore((s) => (s.activeId ? s.jobs[s.activeId] : undefined));
+  const schedRaw = useStore((s) => (s.activeId ? s.chats[s.activeId]?.projValues?.schedule?.value : undefined));
+  const schedules: any[] = Array.isArray(schedRaw) ? schedRaw : [];
   const goal = useStore((s) => {
     const sid = s.activeId;
     const g = sid ? s.chats[sid]?.projValues?.goal?.value : null;
@@ -38,6 +40,7 @@ export function ChatView() {
   const [showTraj, setShowTraj] = useState(false);
   const [jobsOpen, setJobsOpen] = useState(false);
   const [jobTick, setJobTick] = useState(0);
+  const [schedOpen, setSchedOpen] = useState(false);
 
   useEffect(() => {
     if (!jobsOpen) return;
@@ -213,6 +216,33 @@ export function ChatView() {
           {session.agentPreset ? `· ${session.agentPreset}` : ''}
         </div>
         <div style={{ flex: 1 }} />
+        {schedules.length > 0 && (
+          <div style={{ position: 'relative' }}>
+            <button className="btn sm" title={t('sched.title')} onClick={() => setSchedOpen(!schedOpen)}>
+              <Icon name="timer" size={12} />
+              <span className="jobs-badge">{schedules.length}</span>
+            </button>
+            {schedOpen && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 29 }} onClick={() => setSchedOpen(false)} />
+                <div className="jobs-pop">
+                  <div className="jobs-pop-head">{t('sched.title')}</div>
+                  {schedules.map((r: any) => (
+                    <div key={r.id} className="jobs-row">
+                      <span className="jobs-kind">{r.kind}</span>
+                      <span className="jobs-label" title={r.prompt}>{r.prompt}</span>
+                      <span className="jobs-elapsed">
+                        {r.kind === 'every'
+                          ? `${Math.max(1, Math.round((r.everySeconds || 0) / 60))}${locale === 'zh' ? '分/次' : 'm'}`
+                          : new Date(r.scheduledAt).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
         {jobs && jobs.length > 0 && (
           <div style={{ position: 'relative' }}>
             <button
@@ -326,6 +356,7 @@ export function ChatView() {
               );
             }
             const src = item.message?.source || {};
+            const curRating = chat?.feedback[(item as any).message?.id]?.rating;
             const turnFiles = typeof item.turn === 'number' && turnFinalSeq.get(item.turn) === item.seq
               ? deliverables.get(item.turn)
               : undefined;
@@ -336,12 +367,32 @@ export function ChatView() {
                   <span style={{ color: 'var(--faint)', fontWeight: 400 }}>{src.provider}/{src.model}</span>
                 </div>
                 <AssistantMessageView item={item} showReasoning={showReasoning} />
-                {item.usage && (
-                  <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 4 }}>
-                    in {fmtK(item.usage.inputTokens || 0)} · out {fmtK(item.usage.outputTokens || 0)}
-                    {item.usage.cacheReadTokens ? ` · cache ${fmtK(item.usage.cacheReadTokens)}` : ''}
-                  </div>
-                )}
+                <div className="msg-foot">
+                  {item.usage && (
+                    <span style={{ fontSize: 11, color: 'var(--faint)' }}>
+                      in {fmtK(item.usage.inputTokens || 0)} · out {fmtK(item.usage.outputTokens || 0)}
+                      {item.usage.cacheReadTokens ? ` · cache ${fmtK(item.usage.cacheReadTokens)}` : ''}
+                    </span>
+                  )}
+                  {(item as any).message?.id && (
+                    <span className="rate-strip">
+                      <button
+                        className={`rate-btn ${curRating === 'positive' ? 'pos' : ''}`}
+                        title={t('fb.pos')}
+                        onClick={() => void st.rate(activeId, (item as any).message.id, 'positive')}
+                      >
+                        <Icon name="thumbUp" size={13} />
+                      </button>
+                      <button
+                        className={`rate-btn ${curRating === 'negative' ? 'neg' : ''}`}
+                        title={t('fb.neg')}
+                        onClick={() => void st.rate(activeId, (item as any).message.id, 'negative')}
+                      >
+                        <Icon name="thumbDown" size={13} />
+                      </button>
+                    </span>
+                  )}
+                </div>
                 {turnFiles && turnFiles.length > 0 && (
                   <div className="deliver-row">
                     <span className="d-label">{t('deliver.label')}</span>
