@@ -4,6 +4,7 @@ import { useI18n, relTime } from '../i18n';
 import { dshCall } from '../api';
 import { AssistantMessageView, ContextRow, StreamingView, ToolCard, UserBubble } from './blocks';
 import { TrajectoryView } from './TrajectoryView';
+import { deriveDeliverables } from '../store';
 import { Icon } from './Icon';
 
 export function ChatView() {
@@ -14,10 +15,35 @@ export function ChatView() {
   const session = useStore((s) => s.sessions.find((x) => x.sessionId === s.activeId));
   const models = useStore((s) => (s.activeId ? s.modelsCache[s.activeId] : undefined));
   const workspaces = useStore((s) => s.workspaces);
+  const jobs = useStore((s) => (s.activeId ? s.jobs[s.activeId] : undefined));
+  const goal = useStore((s) => {
+    const sid = s.activeId;
+    const g = sid ? s.chats[sid]?.projValues?.goal?.value : null;
+    return g && g.goal ? g : null;
+  });
+  const runningJobs = (jobs || []).filter((j) => !j.finishedAt).length;
+  const deliverables = useMemo(() => deriveDeliverables(chat?.traj || []), [chat?.traj]);
+  // last assistant item per turn number (reverse first-wins)
+  const turnFinalSeq = useMemo(() => {
+    const m = new Map<number, number>();
+    for (let i = (chat?.items.length || 0) - 1; i >= 0; i--) {
+      const it = chat!.items[i];
+      if (it.kind === 'assistant' && typeof it.turn === 'number' && !m.has(it.turn)) m.set(it.turn, it.seq);
+    }
+    return m;
+  }, [chat?.items]);
 
   const [input, setInput] = useState('');
   const [showReasoning, setShowReasoning] = useState(true);
   const [showTraj, setShowTraj] = useState(false);
+  const [jobsOpen, setJobsOpen] = useState(false);
+  const [jobTick, setJobTick] = useState(0);
+
+  useEffect(() => {
+    if (!jobsOpen) return;
+    const t = setInterval(() => setJobTick((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, [jobsOpen]);
   const [modelOpen, setModelOpen] = useState(false);
   const [effortOpen, setEffortOpen] = useState(false);
   const [permOpen, setPermOpen] = useState(false);
@@ -153,6 +179,20 @@ export function ChatView() {
     }
     return id.charAt(0).toUpperCase() + id.slice(1);
   };
+  const goalPhaseLabel = (phase?: string) => {
+    const map: Record<string, string> = locale === 'zh'
+      ? { active: '进行中', paused: '已暂停', blocked: '受阻', complete: '已完成' }
+      : { active: 'active', paused: 'paused', blocked: 'blocked', complete: 'complete' };
+    return map[phase || 'active'] || phase || '';
+  };
+  const jobElapsed = (j: { startedAt: number; finishedAt?: number }) => {
+    void jobTick;
+    const ms = (j.finishedAt ?? Date.now()) - j.startedAt;
+    if (ms < 60_000) return Math.max(0, Math.round(ms / 1000)) + 's';
+    const m = Math.floor(ms / 60_000);
+    if (m < 60) return `${m}m${String(Math.round((ms % 60_000) / 1000)).padStart(2, '0')}s`;
+    return `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}m`;
+  };
 
   return (
     <div className="chat">
@@ -173,6 +213,37 @@ export function ChatView() {
           {session.agentPreset ? `· ${session.agentPreset}` : ''}
         </div>
         <div style={{ flex: 1 }} />
+        {jobs && jobs.length > 0 && (
+          <div style={{ position: 'relative' }}>
+            <button
+              className="btn sm"
+              title={t('jobs.title')}
+              onClick={() => setJobsOpen(!jobsOpen)}
+            >
+              <Icon name="play" size={12} />
+              {runningJobs > 0 && <span className="jobs-badge">{runningJobs}</span>}
+            </button>
+            {jobsOpen && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 29 }} onClick={() => setJobsOpen(false)} />
+                <div className="jobs-pop">
+                  <div className="jobs-pop-head">{t('jobs.title')}</div>
+                  {[...jobs]
+                    .sort((a, b) => (a.finishedAt ? 1 : 0) - (b.finishedAt ? 1 : 0) || a.startedAt - b.startedAt)
+                    .map((j) => (
+                      <div key={j.id} className={`jobs-row ${j.finishedAt ? 'done' : 'run'}`}>
+                        <span className={`jobs-dot ${j.finishedAt ? (j.status === 'failed' ? 'err' : 'ok') : 'live'}`} />
+                        <span className="jobs-kind">{j.kind}</span>
+                        <span className="jobs-label" title={j.label}>{j.label}</span>
+                        {j.detail && <span className="jobs-detail">{j.detail}</span>}
+                        <span className="jobs-elapsed">{jobElapsed(j)}</span>
+                      </div>
+                    ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
         <button
           className={`btn sm ${showTraj ? 'primary' : ''}`}
           onClick={() => setShowTraj(!showTraj)}
@@ -255,6 +326,9 @@ export function ChatView() {
               );
             }
             const src = item.message?.source || {};
+            const turnFiles = typeof item.turn === 'number' && turnFinalSeq.get(item.turn) === item.seq
+              ? deliverables.get(item.turn)
+              : undefined;
             return (
               <div className="msg" key={`${item.seq}-${i}`}>
                 <div className="msg-role">
@@ -266,6 +340,26 @@ export function ChatView() {
                   <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 4 }}>
                     in {fmtK(item.usage.inputTokens || 0)} · out {fmtK(item.usage.outputTokens || 0)}
                     {item.usage.cacheReadTokens ? ` · cache ${fmtK(item.usage.cacheReadTokens)}` : ''}
+                  </div>
+                )}
+                {turnFiles && turnFiles.length > 0 && (
+                  <div className="deliver-row">
+                    <span className="d-label">{t('deliver.label')}</span>
+                    {turnFiles.map((f) => (
+                      <button
+                        key={f.path}
+                        className="d-chip"
+                        title={f.path}
+                        onClick={() => {
+                          void navigator.clipboard?.writeText(f.path);
+                          st.toast('success', locale === 'zh' ? '路径已复制' : 'Path copied', f.path);
+                        }}
+                      >
+                        <Icon name="file" size={11} />
+                        <span className="d-name">{f.path.split(/[\\/]/).pop()}</span>
+                        <span className="d-op">{f.op}</span>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -314,6 +408,16 @@ export function ChatView() {
       )}
 
       <div className="composer-wrap">
+        {goal && (
+          <div className={`goal-bar ph-${goal.goal?.phase || 'active'}`}>
+            <Icon name="flag" size={12} />
+            <span className="g-obj">{goal.goal?.objective}</span>
+            <span className="g-phase">{goalPhaseLabel(goal.goal?.phase)}</span>
+            {typeof goal.roundsStarted === 'number' && goal.goal?.maxGoalRounds ? (
+              <span className="g-rounds">{goal.roundsStarted}/{goal.goal.maxGoalRounds}</span>
+            ) : null}
+          </div>
+        )}
         {slashMatches.length > 0 && (
           <div className="slash-menu">
             {slashMatches.map((s) => (

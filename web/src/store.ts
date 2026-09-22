@@ -300,6 +300,44 @@ function foldEvent(chat: WritableDraft<ChatState>, ev: SessionEvent): void {
   }
 }
 
+export interface DeliverableFile { path: string; op: string }
+
+/** Files created/modified per turn, derived from the light event projection. */
+export function deriveDeliverables(traj: TrajEv[]): Map<number, DeliverableFile[]> {
+  const WRITE_TOOLS = new Set(['write', 'edit', 'str_replace_editor']);
+  const out = new Map<number, DeliverableFile[]>();
+  let turn = 0;
+  const callPaths = new Map<string, { path: string; op: string }>();
+  const push = (t: number, f: DeliverableFile) => {
+    const list = out.get(t) || [];
+    if (!list.some((x) => x.path === f.path)) list.push(f);
+    out.set(t, list);
+  };
+  for (const ev of traj) {
+    const d = ev.data || {};
+    if (ev.type === 'turn/start') turn += 1;
+    else if (ev.type === 'tool/call' && WRITE_TOOLS.has(d.name)) {
+      let args: any = null;
+      try {
+        args = typeof d.args === 'string' ? JSON.parse(d.args) : d.args;
+      } catch {
+        continue;
+      }
+      const path = args?.file_path || args?.path || args?.command?.path;
+      const cmd = args?.command?.command || args?.command;
+      const op = d.name === 'str_replace_editor' && cmd === 'view' ? '' : String(cmd || d.name);
+      if (path && op) callPaths.set(d.callId, { path: String(path), op });
+    } else if (ev.type === 'tool/result' && !d.error && d.callId) {
+      const hit = callPaths.get(d.callId);
+      if (hit) {
+        push(turn, hit);
+        callPaths.delete(d.callId);
+      }
+    }
+  }
+  return out;
+}
+
 interface AppState {
   booted: boolean;
   wsStatus: WsStatus;
@@ -307,6 +345,7 @@ interface AppState {
   sessions: SessionSummary[];
   workspaces: WorkspaceView[];
   archived: string[];
+  jobs: Record<string, Array<{ id: string; kind: string; label: string; status: string; startedAt: number; finishedAt?: number; detail?: string }>>;
   taskMeta: Record<string, TaskMeta>;
   taskGroups: TaskGroup[];
   skills: SkillEntry[];
@@ -389,6 +428,12 @@ export const useStore = create<AppState>()(
             ensureChat(s, frame.sessionId).queue = frame.items || [];
           });
           break;
+        case 'session/jobs':
+          mutate((s) => {
+            if ((frame.jobs || []).length === 0) delete s.jobs[frame.sessionId];
+            else s.jobs[frame.sessionId] = frame.jobs;
+          });
+          break;
         case 'session/projection':
           mutate((s) => {
             const chat = ensureChat(s, frame.sessionId);
@@ -466,6 +511,7 @@ export const useStore = create<AppState>()(
       sessions: [],
       workspaces: [],
       archived: [],
+      jobs: {},
       taskMeta: {},
       taskGroups: [],
       skills: [],

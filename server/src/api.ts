@@ -164,6 +164,8 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
   app.get('/ws', { websocket: true }, (socket) => {
     sockets.add(socket as unknown as WebSocket);
     socket.send(JSON.stringify({ t: 'hello', dsh: manager.getStatus(), version: '0.1.0' }));
+    // replay the live control baseline (queues/jobs/projections) missed before this client attached
+    for (const frame of dsh.controlSnapshot()) socket.send(JSON.stringify({ t: 'dsh:mux', frame }));
     socket.on('close', () => sockets.delete(socket as unknown as WebSocket));
     // downlink-only: ignore any client message
   });

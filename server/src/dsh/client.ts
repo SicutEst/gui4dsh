@@ -116,6 +116,7 @@ class DshClient {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private streamSeq = 0;
   private follows = new Map<string, string>(); // sessionId -> streamId
+  private controlStreamId = ''; // host-wide queue/jobs/projection stream
   private pendingAsks = new Map<string, PendingAsk>(); // eventId -> ask
   private eventClientId = '';
 
@@ -327,6 +328,10 @@ class DshClient {
       markUp();
       this.streamSeq = 0;
       this.sendWs({ type: 'open', streamId: this.nextStreamId('ev'), endpoint: '$events', payload: { args: {} } });
+      // host-wide live control state (queues, background jobs, projections incl. goal)
+      const ctl = this.nextStreamId('ctl');
+      this.controlStreamId = ctl;
+      this.sendWs({ type: 'open', streamId: ctl, endpoint: 'session/control', payload: { args: {} } });
     };
     ws.onmessage = (ev: { data: unknown }) => {
       try {
@@ -341,6 +346,7 @@ class DshClient {
       this.wsClosed = true;
       this.follows.clear();
       this.followMax.clear();
+      this.controlStreamId = '';
       this.pendingAsks.clear();
       // fail any pending snapshot waiters so history requests don't hang
       for (const [, w] of this.snapshotWaiters) {
@@ -484,6 +490,10 @@ class DshClient {
 
   private onStreamItem(streamId: string, value: any): void {
     if (!value || typeof value !== 'object') return;
+    if (streamId === this.controlStreamId) {
+      this.onControlItem(value);
+      return;
+    }
     const sid = this.sessionOf(streamId);
     if (!sid) {
       // $events stream (or unknown) — host-level events / asks
@@ -518,6 +528,71 @@ class DshClient {
   private sessionOf(streamId: string): string {
     for (const [sid, fid] of this.follows) if (fid === streamId) return sid;
     return '';
+  }
+
+  /** session/control frames: baseline {queues, jobs, projections} then live replacements. */
+  private controlCache = new Map<string, { queue?: unknown; jobs?: unknown; projections?: Map<string, { value: unknown; seq: number }> }>();
+
+  /** Reconnect baseline for freshly attached web clients (dsh:mux frames). */
+  controlSnapshot(): Array<Record<string, unknown> & { type: string }> {
+    const out: Array<Record<string, unknown> & { type: string }> = [];
+    for (const [sessionId, c] of this.controlCache) {
+      if (c.queue) out.push({ type: 'session/queue', sessionId, items: c.queue });
+      if (c.jobs) out.push({ type: 'session/jobs', sessionId, jobs: c.jobs });
+      for (const [key, p] of c.projections || []) {
+        out.push({ type: 'session/projection', sessionId, key, value: p.value, seq: p.seq });
+      }
+    }
+    return out;
+  }
+
+  private cacheControl(sessionId: string, patch: (c: { queue?: unknown; jobs?: unknown; projections?: Map<string, { value: unknown; seq: number }> }) => void): void {
+    let c = this.controlCache.get(sessionId);
+    if (!c) {
+      c = { projections: new Map() };
+      this.controlCache.set(sessionId, c);
+    }
+    patch(c);
+  }
+
+  private onControlItem(value: any): void {
+    if (value.type === 'baseline') {
+      const b = value.value || {};
+      this.controlCache.clear();
+      for (const [sessionId, items] of Object.entries(b.queues || {})) {
+        this.emitMux('session/queue', sessionId, { type: 'session/queue', sessionId, items });
+        this.cacheControl(sessionId, (c) => (c.queue = items));
+      }
+      for (const [sessionId, jobs] of Object.entries(b.jobs || {})) {
+        if ((jobs as unknown[]).length > 0) {
+          this.emitMux('session/jobs', sessionId, { type: 'session/jobs', sessionId, jobs });
+          this.cacheControl(sessionId, (c) => (c.jobs = jobs));
+        }
+      }
+      for (const [sessionId, block] of Object.entries(b.projections || {})) {
+        const values = (block as any)?.values || {};
+        const asOfSeq = (block as any)?.asOfSeq || 0;
+        for (const [key, val] of Object.entries(values)) {
+          this.emitMux('session/projection', sessionId, { type: 'session/projection', sessionId, key, value: val, seq: asOfSeq });
+          this.cacheControl(sessionId, (c) => (c.projections!.set(key, { value: val, seq: asOfSeq })));
+        }
+      }
+      return;
+    }
+    if (value.type === 'queue' && value.sessionId) {
+      this.emitMux('session/queue', value.sessionId, { type: 'session/queue', sessionId: value.sessionId, items: value.items });
+      this.cacheControl(value.sessionId, (c) => (c.queue = value.items));
+      return;
+    }
+    if (value.type === 'jobs' && value.sessionId) {
+      this.emitMux('session/jobs', value.sessionId, { type: 'session/jobs', sessionId: value.sessionId, jobs: value.jobs });
+      this.cacheControl(value.sessionId, (c) => (c.jobs = value.jobs));
+      return;
+    }
+    if (value.type === 'projection' && value.sessionId) {
+      this.emitMux('session/projection', value.sessionId, { type: 'session/projection', sessionId: value.sessionId, key: value.key, value: value.value, seq: value.seq });
+      this.cacheControl(value.sessionId, (c) => (c.projections!.set(value.key, { value: value.value, seq: value.seq })));
+    }
   }
 
   private emitMux(method: string, rpcId: string, frame: Record<string, unknown> & { type: string }): void {
