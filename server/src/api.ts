@@ -8,6 +8,7 @@ import fastifyWebsocket from '@fastify/websocket';
 import { webDist, dshHome } from './config.js';
 import * as memory from './memory.js';
 import * as idle from './idle.js';
+import * as browser from './browser.js';
 import { store } from './store.js';
 import { bus } from './bus.js';
 import { dsh } from './dsh/client.js';
@@ -313,6 +314,13 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
     const id = (req.query as { id?: string }).id || '';
     idle.removeIdleTask(String(id));
     return { ok: true };
+  });
+
+  // browser automation (MCP over CDP, registered into cordis.yml)
+  app.get('/api/fe/browser', async () => browser.browserStatus());
+  app.post('/api/fe/browser/toggle', async (req) => {
+    const { enabled } = (req.body || {}) as { enabled?: boolean };
+    return browser.setBrowserEnabled(!!enabled);
   });
   app.put('/api/fe/settings', async (req) => {
     const body = req.body as Record<string, unknown>;

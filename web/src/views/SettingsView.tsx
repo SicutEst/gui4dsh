@@ -116,6 +116,7 @@ export function SettingsView() {
         </div>
 
         <PushCard settings={settings} onChange={(patch) => setSettings({ ...settings, ...patch } as GatewaySettings)} />
+        <BrowserCard />
 
         <FrpCard settings={settings} onChange={(patch) => setSettings({ ...settings, ...patch } as GatewaySettings)} />
       </div>
@@ -202,6 +203,43 @@ export function SettingsView() {
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  function BrowserCard() {
+    const [enabled, setEnabled] = useState(false);
+    const [busy, setBusy] = useState(false);
+    useEffect(() => {
+      fe.browserStatus().then((r) => setEnabled(!!(r as any).enabled));
+    }, []);
+    return (
+      <div className="card">
+        <div className="field">
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {t('settings.browserTitle')}
+            <span className={`dot ${enabled ? 'ok' : 'bad'}`} style={{ width: 8, height: 8, borderRadius: 4 }} />
+            {enabled ? t('settings.browserOn') : t('settings.browserOff')}
+          </label>
+          <p style={{ fontSize: 12, color: 'var(--faint)', margin: '6px 0 10px' }}>{t('settings.browserHint')}</p>
+          <button
+            className={`btn sm ${enabled ? '' : 'primary'}`}
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              const r = await fe.browserToggle(!enabled);
+              if (!r.ok) st.toast('error', (r as any).error || 'failed');
+              else {
+                const s = await fe.browserStatus();
+                setEnabled(!!(s as any).enabled);
+                st.toast('success', t('settings.browserApplied'));
+              }
+              setBusy(false);
+            }}
+          >
+            {busy ? t('common.loading') : enabled ? t('settings.browserDisable') : t('settings.browserEnable')}
+          </button>
+        </div>
       </div>
     );
   }

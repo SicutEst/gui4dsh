@@ -95,6 +95,9 @@ export const fe = {
     req<{ ok: boolean; task?: { id: string } }>('/api/fe/idle/task', { method: 'POST', body: JSON.stringify({ prompt, cwd }) }),
   idleRemoveTask: (id: string) =>
     req<{ ok: boolean }>(`/api/fe/idle/task?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  browserStatus: () => req<{ enabled: boolean; script: string }>('/api/fe/browser'),
+  browserToggle: (enabled: boolean) =>
+    req<{ ok: boolean; error?: string; restarted?: boolean }>('/api/fe/browser/toggle', { method: 'POST', body: JSON.stringify({ enabled }) }),
   duckdnsBind: (token: string, domain: string, ip?: string, ipv6?: string) =>
     req<{ ok: boolean; response?: string; error?: string }>('/api/fe/duckdns/bind', { method: 'POST', body: JSON.stringify({ token, domain, ip, ipv6 }) }),
   duckdnsCheck: (host: string) =>
