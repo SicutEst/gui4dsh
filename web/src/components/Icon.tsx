@@ -7,7 +7,7 @@ type IconName =
   | 'eye' | 'shield' | 'alert' | 'info' | 'chevronDown' | 'chevronRight' | 'clock' | 'calendar'
   | 'list' | 'external' | 'sun' | 'moon' | 'lock' | 'home' | 'activity' | 'message' | 'phone'
   | 'download' | 'grid' | 'link' | 'sparkles' | 'flag' | 'wrench' | 'code'
-  | 'thumbUp' | 'thumbDown' | 'timer';
+  | 'thumbUp' | 'thumbDown' | 'timer' | 'mic';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   plus: <path d="M12 5v14M5 12h14" />,
@@ -66,6 +66,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   thumbUp: <><path d="M7 10v12" /><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" /></>,
   thumbDown: <><path d="M17 14V2" /><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z" /></>,
   timer: <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5M9 2h6" /></>,
+  mic: <><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" /></>,
 };
 
 export function Icon({ name, size = 16, className, style }: { name: IconName; size?: number; className?: string; style?: React.CSSProperties }) {
