@@ -57,6 +57,14 @@ export interface ChatItem {
   text?: string;
 }
 
+/** Light event projection kept per chat for the trajectory view (times + previews). */
+export interface TrajEv {
+  seq: number;
+  time: number;
+  type: string;
+  data?: any;
+}
+
 interface ChatState {
   items: ChatItem[];
   lastSeq: number;
@@ -70,6 +78,7 @@ interface ChatState {
   projValues: Record<string, { value: any; seq: number }>;
   model?: { provider?: string; model?: string };
   streamIdx: Record<string, number>;
+  traj: TrajEv[];
 }
 
 function newChat(): ChatState {
@@ -85,6 +94,7 @@ function newChat(): ChatState {
     queue: [],
     projValues: {},
     streamIdx: {},
+    traj: [],
   };
 }
 
@@ -97,11 +107,74 @@ function ensureChat(s: WritableDraft<AppState>, sid: string): WritableDraft<Chat
   return s.chats[sid];
 }
 
+/** Event types the trajectory ledger shows as rows (others are skipped as noise). */
+const TRAJ_TYPES = new Set([
+  'turn/start', 'turn/end', 'step/start',
+  'user/message', 'assistant/message', 'system/message',
+  'tool/call', 'tool/result',
+  'permission/preset', 'sandbox/mode', 'approval/policy',
+]);
+
+function pushTraj(chat: WritableDraft<ChatState>, ev: SessionEvent): void {
+  if (!TRAJ_TYPES.has(ev.type) && !ev.type.startsWith('compaction')) return;
+  let data: any;
+  switch (ev.type) {
+    case 'user/message': {
+      const m = ev.data;
+      const blocks = m?.content || [];
+      data = {
+        user: m?.source?.kind === 'user',
+        text: blocks.filter((b: any) => b.type === 'text').map((b: any) => b.text || '').join('\n').slice(0, 300),
+        images: blocks.filter((b: any) => b.type === 'image').length,
+        files: blocks.filter((b: any) => b.type === 'file' || b.type === 'file-reference').length,
+      };
+      break;
+    }
+    case 'assistant/message': {
+      const { message, usage } = ev.data || {};
+      const blocks = message?.content || [];
+      data = {
+        provider: message?.source?.provider, model: message?.source?.model,
+        text: blocks.filter((b: any) => b.type === 'text').map((b: any) => b.text || '').join('\n').slice(0, 300),
+        reasoning: blocks.some((b: any) => b.type === 'reasoning'),
+        toolCalls: blocks.filter((b: any) => b.type === 'tool-call').length,
+        usage: usage || null,
+      };
+      break;
+    }
+    case 'tool/call':
+      data = { callId: ev.data?.callId, name: ev.data?.name, args: String(ev.data?.arguments || '').slice(0, 1200) };
+      break;
+    case 'tool/result': {
+      const content = ev.data?.message?.content || [];
+      const preview = content
+        .filter((b: any) => b.type === 'text' || b.type === 'tool-result')
+        .map((b: any) => b.text || JSON.stringify(b).slice(0, 200))
+        .join('\n')
+        .slice(0, 800);
+      data = { callId: ev.data?.message?.source?.callId ?? content?.[0]?.toolCallId, error: !!ev.data?.error, preview };
+      break;
+    }
+    case 'system/message': {
+      const blocks = ev.data?.content || ev.data?.message?.content || [];
+      data = { text: (Array.isArray(blocks) ? blocks : []).filter((b: any) => b.type === 'text').map((b: any) => b.text || '').join('\n').slice(0, 200) };
+      break;
+    }
+    case 'turn/end':
+      data = { kind: ev.data?.reason?.kind, message: ev.data?.reason?.error?.message };
+      break;
+    default:
+      data = ev.data && typeof ev.data === 'object' ? { value: String((ev.data as any).preset || (ev.data as any).mode || (ev.data as any).policy || '').slice(0, 80) } : undefined;
+  }
+  chat.traj.push({ seq: ev.seq, time: ev.time || 0, type: ev.type, data });
+}
+
 /** Fold one durable session event into a chat draft. */
 function foldEvent(chat: WritableDraft<ChatState>, ev: SessionEvent): void {
   if (ev.seq <= chat.lastSeq) return;
   chat.lastSeq = ev.seq;
   if (ev.seq < chat.minSeq) chat.minSeq = ev.seq;
+  pushTraj(chat, ev);
 
   switch (ev.type) {
     case 'turn/start':
@@ -487,6 +560,7 @@ export const useStore = create<AppState>()(
               c.lastSeq = 0;
               c.minSeq = Number.MAX_SAFE_INTEGER;
               c.streamIdx = {};
+              c.traj = [];
               for (const entry of v.events || []) foldEvent(c, entry.event);
               c.hasMore = v.hasMore;
               c.loaded = true;
@@ -617,12 +691,16 @@ export const useStore = create<AppState>()(
           c.loading = false;
           let minSeq = c.minSeq;
           const older: ChatItem[] = [];
+          const olderTraj: TrajEv[] = [];
+          const tmp = { traj: olderTraj } as WritableDraft<ChatState>;
           for (const entry of res.value!.events || []) {
             const ev = entry.event;
             if (ev.seq < minSeq) minSeq = ev.seq;
             foldOlderInto(older, ev);
+            pushTraj(tmp, ev);
           }
           c.items.unshift(...older);
+          c.traj.unshift(...olderTraj);
           c.hasMore = res.value!.hasMore;
           c.minSeq = minSeq;
         });

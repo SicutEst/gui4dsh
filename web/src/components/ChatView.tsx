@@ -3,6 +3,7 @@ import { useStore, type AttachmentDraft } from '../store';
 import { useI18n, relTime } from '../i18n';
 import { dshCall } from '../api';
 import { AssistantMessageView, ContextRow, StreamingView, ToolCard, UserBubble } from './blocks';
+import { TrajectoryView } from './TrajectoryView';
 import { Icon } from './Icon';
 
 export function ChatView() {
@@ -16,6 +17,7 @@ export function ChatView() {
 
   const [input, setInput] = useState('');
   const [showReasoning, setShowReasoning] = useState(true);
+  const [showTraj, setShowTraj] = useState(false);
   const [modelOpen, setModelOpen] = useState(false);
   const [effortOpen, setEffortOpen] = useState(false);
   const [permOpen, setPermOpen] = useState(false);
@@ -172,6 +174,13 @@ export function ChatView() {
         </div>
         <div style={{ flex: 1 }} />
         <button
+          className={`btn sm ${showTraj ? 'primary' : ''}`}
+          onClick={() => setShowTraj(!showTraj)}
+          title={t('traj.title')}
+        >
+          <Icon name="activity" size={13} />
+        </button>
+        <button
           className={`btn sm ${showReasoning ? 'primary' : ''}`}
           onClick={() => setShowReasoning(!showReasoning)}
           title={t('chat.reasoning')}
@@ -180,6 +189,17 @@ export function ChatView() {
         </button>
       </div>
 
+      {showTraj ? (
+        <div className="chat-scroll traj-host">
+          <TrajectoryView
+            traj={chat?.traj || []}
+            streaming={!!chat?.streaming}
+            hasMore={!!chat?.hasMore}
+            loading={!!chat?.loading}
+            onLoadOlder={() => activeId && void st.loadOlder(activeId)}
+          />
+        </div>
+      ) : (
       <div
         className="chat-scroll"
         ref={scrollRef}
@@ -291,6 +311,7 @@ export function ChatView() {
           </div>
         )}
       </div>
+      )}
 
       <div className="composer-wrap">
         {slashMatches.length > 0 && (

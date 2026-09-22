@@ -64,7 +64,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   code: <><path d="M16 18l6-6-6-6M8 6l-6 6 6 6" /></>,
 };
 
-export function Icon({ name, size = 16, className }: { name: IconName; size?: number; className?: string }) {
+export function Icon({ name, size = 16, className, style }: { name: IconName; size?: number; className?: string; style?: React.CSSProperties }) {
   return (
     <svg
       className={className}
@@ -77,7 +77,7 @@ export function Icon({ name, size = 16, className }: { name: IconName; size?: nu
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
-      style={{ flexShrink: 0, display: 'inline-block', verticalAlign: '-0.15em' }}
+      style={{ flexShrink: 0, display: 'inline-block', verticalAlign: '-0.15em', ...style }}
     >
       {PATHS[name]}
     </svg>
