@@ -385,9 +385,8 @@ interface AppState {
 
   boot: () => Promise<void>;
   resyncAll: () => Promise<void>;
-  setView: (v: ViewName) => void;
-  setSidebar: (open: boolean) => void;
-  openSession: (sid: string) => Promise<void>;
+  setView: (v: ViewName) => void;  setSidebar: (open: boolean) => void;
+  openSession: (sid: string, silent?: boolean) => Promise<void>;
   refreshSessions: () => Promise<void>;
   refreshWorkspaces: () => Promise<void>;
   refreshTaskMeta: () => Promise<void>;
@@ -565,13 +564,14 @@ export const useStore = create<AppState>()(
           get().refreshAutomations(),
           get().refreshHooks(),
         ]);
-        // re-pull the open conversation so messages sent elsewhere appear
+        // re-pull the open conversation so messages sent elsewhere appear —
+        // silently: a focus/visibility resync must never hijack the current view
         const sid = get().activeId;
         if (sid) {
           mutate((s) => {
             if (s.chats[sid]) s.chats[sid].loaded = false;
           });
-          await get().openSession(sid);
+          await get().openSession(sid, true);
         }
       },
 
@@ -608,11 +608,13 @@ export const useStore = create<AppState>()(
       setRemoteOpen: (open) => mutate((s) => void (s.remoteOpen = open)),
       setComposerPreset: (text) => mutate((s) => void (s.composerPreset = text)),
 
-      openSession: async (sid) => {
+      openSession: async (sid, silent = false) => {
         mutate((s) => {
           s.activeId = sid;
-          s.view = 'chat';
-          s.sidebarOpen = false;
+          if (!silent) {
+            s.view = 'chat';
+            s.sidebarOpen = false;
+          }
         });
         const existing = get().chats[sid];
         if (!existing || !existing.loaded) {

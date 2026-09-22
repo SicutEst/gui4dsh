@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fe } from '../api';
+import { useStore } from '../store';
 import { useI18n } from '../i18n';
 import { Icon } from '../components/Icon';
 
@@ -7,6 +8,7 @@ interface MemFile { name: string; content: string }
 
 export function MemoryView() {
   const { t, locale } = useI18n();
+  const st = useStore();
   const [enabled, setEnabled] = useState(false);
   const [dir, setDir] = useState('');
   const [files, setFiles] = useState<MemFile[]>([]);
@@ -84,11 +86,11 @@ export function MemoryView() {
   const selTitle = sel ? (sel === 'MEMORY.md' ? (locale === 'zh' ? '索引' : 'Index') : sel.replace(/\.md$/, '')) : '';
 
   return (
-    <div className="view">
-      <div className="view-head">
-        <Icon name="brain" size={16} />
-        <b>{t('nav.memory')}</b>
-        <span style={{ fontSize: 12, color: 'var(--faint)' }}>{dir}</span>
+    <>
+      <div className="topbar">
+        <button className="mobile-toggle" onClick={() => st.setSidebar(true)}><Icon name="list" size={18} /></button>
+        <h1><Icon name="brain" size={15} /> {t('nav.memory')}</h1>
+        <span style={{ fontSize: 11, color: 'var(--faint)' }} className="hide-sm">{dir}</span>
         <div style={{ flex: 1 }} />
         <button className="btn sm" onClick={() => setCreating(true)}>
           <Icon name="plus" size={12} /> {t('mem.new')}
@@ -97,7 +99,7 @@ export function MemoryView() {
           <Icon name={enabled ? 'check' : 'x'} size={12} /> {enabled ? t('mem.on') : t('mem.off')}
         </button>
       </div>
-      <div className="view-body">
+      <div className="mem-wrap">
         <div className={`mem-banner ${enabled ? 'ok' : ''}`}>
           <Icon name="info" size={13} />
           {enabled ? t('mem.enabledHint') : t('mem.disabledHint')}
@@ -147,7 +149,7 @@ export function MemoryView() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

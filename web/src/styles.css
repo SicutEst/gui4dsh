@@ -781,3 +781,4 @@ textarea.json {
 .send-btn.voice { background: transparent; border: 1px solid var(--border); color: var(--dim); }
 .send-btn.voice:hover { border-color: var(--accent); color: var(--accent); }
 .send-btn.voice.rec { border-color: var(--red, #e05252); color: var(--red, #e05252); animation: traj-pulse 1.2s ease-in-out infinite; }
+.mem-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 16px; }
