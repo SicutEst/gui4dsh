@@ -174,7 +174,7 @@ export function markUp(): void {
   bus.emit({ type: 'dsh:status', status: 'up' });
 }
 
-function killTree(pid: number): void {
+export function killTree(pid: number): void {
   try {
     if (process.platform === 'win32') {
       spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });

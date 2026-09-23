@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { monoRoot } from './config.js';
 import { store } from './store.js';
+import { killTree } from './dsh/manager.js';
 import { bus } from './bus.js';
 import * as manager from './dsh/manager.js';
 import { probeCompat } from './compat.js';
@@ -41,10 +42,20 @@ function npmInstall(version: string): Promise<{ code: number; output: string }> 
       { cwd: monoRoot, env: process.env, stdio: ['ignore', 'pipe', 'pipe'], shell: false },
     );
     let output = '';
+    let settled = false;
+    // npm can hang on network/lock contention forever, wedging the update
+    // path AND holding node_modules locks that freeze the next dsh spawn
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      output += '\n[updater] npm install timed out after 5min — killing';
+      try { killTree(proc.pid!); } catch { /* best effort */ }
+      resolve({ code: -1, output });
+    }, 5 * 60_000);
     proc.stdout?.on('data', (d) => (output += String(d)));
     proc.stderr?.on('data', (d) => (output += String(d)));
-    proc.on('error', (err) => resolve({ code: -1, output: output + err.message }));
-    proc.on('exit', (code) => resolve({ code: code ?? -1, output }));
+    proc.on('error', (err) => { if (!settled) { settled = true; clearTimeout(timer); resolve({ code: -1, output: output + err.message }); } });
+    proc.on('exit', (code) => { if (!settled) { settled = true; clearTimeout(timer); resolve({ code: code ?? -1, output }); } });
   });
 }
 
