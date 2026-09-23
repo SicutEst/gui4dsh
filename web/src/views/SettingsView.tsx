@@ -123,7 +123,7 @@ export function SettingsView() {
 
   function ModelsTab() {
     return (
-      <div className="settings-cards2">
+      <div className="settings-cards-col">
         <ProvidersCard />
         <BrowserCard />
         <CredsCard />

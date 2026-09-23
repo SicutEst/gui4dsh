@@ -783,3 +783,4 @@ textarea.json {
 .idle-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; }
 .idle-row .idle-prompt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .idle-row .idle-meta { font-size: 11px; color: var(--faint); flex-shrink: 0; }
+.settings-cards-col { display: flex; flex-direction: column; gap: 14px; }
