@@ -286,6 +286,28 @@ class DshClient {
     this.ensureWs();
   }
 
+  private lastControlRefresh = 0;
+
+  /**
+   * Reopen the session/control stream to pull a fresh baseline. Needed when
+   * the original baseline arrived while dsh was still booting (empty session
+   * table) and no live traffic ever populated the cache afterwards.
+   */
+  refreshControl(force = false): void {
+    if (!force && Date.now() - this.lastControlRefresh < 60_000) return;
+    this.lastControlRefresh = Date.now();
+    if (this.controlStreamId && this.ws) {
+      try { this.sendWs({ type: 'cancel', streamId: this.controlStreamId }); } catch { /* closed */ }
+    }
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const ctl = this.nextStreamId('ctl');
+      this.controlStreamId = ctl;
+      this.sendWs({ type: 'open', streamId: ctl, endpoint: 'session/control', payload: { args: {} } });
+    } else {
+      this.ensureWs();
+    }
+  }
+
   private ensureWs(): void {
     if (!this.wsClosed || this.ws) return;
     void this.openWs();
@@ -554,6 +576,7 @@ class DshClient {
 
   private onControlItem(value: any): void {
     if (value.type === 'baseline') {
+      console.log(`[ctl] baseline: queues=${Object.keys((value.value || {}).queues || {}).length} projections=${Object.keys((value.value || {}).projections || {}).length}`);
       const b = value.value || {};
       this.controlCache.clear();
       for (const [sessionId, items] of Object.entries(b.queues || {})) {

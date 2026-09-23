@@ -168,7 +168,10 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
     sockets.add(socket as unknown as WebSocket);
     socket.send(JSON.stringify({ t: 'hello', dsh: manager.getStatus(), version: '0.2.0' }));
     // replay the live control baseline (queues/jobs/projections) missed before this client attached
-    for (const frame of dsh.controlSnapshot()) socket.send(JSON.stringify({ t: 'dsh:mux', frame }));
+    const snap = dsh.controlSnapshot();
+    for (const frame of snap) socket.send(JSON.stringify({ t: 'dsh:mux', frame }));
+    // a stale-empty cache (baseline taken mid-dsh-boot, no traffic since) self-heals here
+    if (snap.length === 0) dsh.refreshControl();
     socket.on('close', () => sockets.delete(socket as unknown as WebSocket));
     // downlink-only: ignore any client message
   });
