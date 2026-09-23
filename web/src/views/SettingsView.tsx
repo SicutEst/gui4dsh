@@ -8,7 +8,7 @@ import { HooksView } from './HooksView';
 import type { GatewaySettings } from '../types';
 import { storedTheme, applyTheme } from '../theme';
 
-type Tab = 'general' | 'dsh' | 'creds' | 'stats' | 'hooks' | 'about';
+type Tab = 'general' | 'models' | 'frp' | 'dsh' | 'stats' | 'hooks' | 'about';
 
 interface NamespaceView {
   ns: string;
@@ -32,15 +32,16 @@ export function SettingsView() {
       </div>
       <div className="view-body">
         <div className="settings-nav">
-          {(['general', 'dsh', 'creds', 'stats', 'hooks', 'about'] as Tab[]).map((x) => (
+          {(['general', 'models', 'frp', 'dsh', 'stats', 'hooks', 'about'] as Tab[]).map((x) => (
             <button key={x} className={tab === x ? 'active' : ''} onClick={() => setTab(x)}>
-              {t(`settings.${x}`)}
+              {t(`settings.${x === 'models' || x === 'frp' ? x + 'Tab' : x}`)}
             </button>
           ))}
         </div>
         {tab === 'general' && <GeneralTab />}
+        {tab === 'models' && <ModelsTab />}
+        {tab === 'frp' && <FrpTab />}
         {tab === 'dsh' && <DshTab />}
-        {tab === 'creds' && <CredsTab />}
         {tab === 'stats' && <StatsView embedded />}
         {tab === 'hooks' && <HooksView embedded />}
         {tab === 'about' && <AboutTab />}
@@ -116,9 +117,28 @@ export function SettingsView() {
         </div>
 
         <PushCard settings={settings} onChange={(patch) => setSettings({ ...settings, ...patch } as GatewaySettings)} />
-        <BrowserCard />
-        <ProvidersCard />
+      </div>
+    );
+  }
 
+  function ModelsTab() {
+    return (
+      <div className="settings-cards2">
+        <ProvidersCard />
+        <BrowserCard />
+        <CredsCard />
+      </div>
+    );
+  }
+
+  function FrpTab() {
+    const [settings, setSettings] = useState<GatewaySettings | null>(null);
+    useEffect(() => {
+      fe.settings().then(setSettings);
+    }, []);
+    if (!settings) return <div style={{ color: 'var(--faint)' }}>{t('common.loading')}</div>;
+    return (
+      <div className="settings-cards2">
         <FrpCard settings={settings} onChange={(patch) => setSettings({ ...settings, ...patch } as GatewaySettings)} />
       </div>
     );
@@ -564,7 +584,7 @@ export function SettingsView() {
     );
   }
 
-  function CredsTab() {
+  function CredsCard() {
     const [ref, setRef] = useState('DEEPSEEK_API_KEY');
     const [value, setValue] = useState('');
     const [state, setState] = useState<Record<string, { configured: boolean; writable: boolean; source?: string }> | null>(null);
