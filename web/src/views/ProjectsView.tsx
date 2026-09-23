@@ -166,15 +166,17 @@ export function ProjectsView() {
                       could never show it */}
                   {!isMobileBrowser() && (
                     <button className="btn sm" onClick={() => {
-                      // the RPC can hang forever when dsh runs as a service
-                      // (explorer in session 0) — race it against a short timer
-                      const attempt = dshOk('session.openWorkspacePath', { path: w.path });
-                      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
-                      void Promise.race([attempt, timeout])
-                        .catch(async () => {
-                          try { await navigator.clipboard.writeText(w.path); } catch { /* ignore */ }
-                          st.toast('info', t('projects.openDirFallback'), w.path);
-                        });
+                      // a service-deployed gateway cannot show windows on the
+                      // user's desktop (session 0), so "open" lands INSIDE the
+                      // app: open one of the workspace's sessions with the file
+                      // panel rooted at that directory
+                      const sid = w.sessionIds?.find((id) => st.sessions.some((s) => s.sessionId === id)) || w.sessionIds?.[0];
+                      if (sid) {
+                        void st.openSession(sid);
+                        if (!st.filePanel) st.toggleFilePanel();
+                      } else {
+                        st.toast('info', t('projects.openDirEmpty'), w.path);
+                      }
                     }}>
                       {t('projects.openDir')}
                     </button>
