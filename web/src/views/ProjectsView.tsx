@@ -5,6 +5,19 @@ import { useI18n, relTime } from '../i18n';
 import { Icon } from '../components/Icon';
 import type { WorkspaceView as WS } from '../types';
 
+/** Phone browsers can never show a folder that lives on the host machine —
+ *  cross-check UA with a coarse pointer on a narrow viewport so touch
+ *  laptops with fine pointers stay "desktop". */
+function isMobileBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return true;
+  try {
+    return window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(max-width: 900px)').matches;
+  } catch {
+    return false;
+  }
+}
+
 function projSessionTitle(s: { sessionId: string; cwd?: string; projections?: { values?: Record<string, unknown> } }, locale: string): string {
   const t = s.projections?.values?.title;
   if (typeof t === 'string' && t.trim()) return t;
@@ -148,19 +161,24 @@ export function ProjectsView() {
                       void dshOk('workspace.rename', { workspaceId: w.workspaceId, title: name.trim() }).then(() => st.refreshWorkspaces());
                     }
                   }}>{t('projects.rename')}</button>
-                  <button className="btn sm" onClick={() => {
-                    // the RPC can hang forever when dsh runs as a service
-                    // (explorer in session 0) — race it against a short timer
-                    const attempt = dshOk('session.openWorkspacePath', { path: w.path });
-                    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
-                    void Promise.race([attempt, timeout])
-                      .catch(async () => {
-                        try { await navigator.clipboard.writeText(w.path); } catch { /* ignore */ }
-                        st.toast('info', t('projects.openDirFallback'), w.path);
-                      });
-                  }}>
-                    {t('projects.openDir')}
-                  </button>
+                  {/* opening Explorer only makes sense from the desktop that hosts
+                      the workspace — the folder lives on that machine, a phone
+                      could never show it */}
+                  {!isMobileBrowser() && (
+                    <button className="btn sm" onClick={() => {
+                      // the RPC can hang forever when dsh runs as a service
+                      // (explorer in session 0) — race it against a short timer
+                      const attempt = dshOk('session.openWorkspacePath', { path: w.path });
+                      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
+                      void Promise.race([attempt, timeout])
+                        .catch(async () => {
+                          try { await navigator.clipboard.writeText(w.path); } catch { /* ignore */ }
+                          st.toast('info', t('projects.openDirFallback'), w.path);
+                        });
+                    }}>
+                      {t('projects.openDir')}
+                    </button>
+                  )}
                   <button className="btn sm danger" onClick={async () => {
                     if (!window.confirm(t('common.confirmDelete'))) return;
                     await dshOk('workspace.delete', { workspaceId: w.workspaceId }).catch((e) => st.toast('error', e.message));
