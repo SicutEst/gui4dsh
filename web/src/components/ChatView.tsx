@@ -42,41 +42,6 @@ export function ChatView() {
   const [jobsOpen, setJobsOpen] = useState(false);
   const [jobTick, setJobTick] = useState(0);
   const [schedOpen, setSchedOpen] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const recRef = useRef<any>(null);
-  const SpeechRec = typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : null;
-
-  const toggleMic = () => {
-    if (!SpeechRec) return;
-    if (recRef.current) {
-      try { recRef.current.stop(); } catch { /* ignore */ }
-      return;
-    }
-    const r = new SpeechRec();
-    r.lang = locale === 'zh' ? 'zh-CN' : 'en-US';
-    r.interimResults = true;
-    r.continuous = true;
-    const base = input ? input.trimEnd() + ' ' : '';
-    let finalText = '';
-    r.onresult = (ev: any) => {
-      let interim = '';
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        const tr = ev.results[i][0]?.transcript || '';
-        if (ev.results[i].isFinal) finalText += tr;
-        else interim += tr;
-      }
-      setInput(base + finalText + interim);
-    };
-    r.onend = () => { recRef.current = null; setRecording(false); };
-    r.onerror = r.onend;
-    recRef.current = r;
-    try { r.start(); setRecording(true); } catch { recRef.current = null; }
-  };
-
-  // leaving the chat (view switch / unmount) must release the microphone
-  useEffect(() => () => {
-    try { recRef.current?.stop(); } catch { /* ignore */ }
-  }, []);
 
   useEffect(() => {
     if (!jobsOpen) return;
@@ -766,15 +731,6 @@ export function ChatView() {
                 </div>
               )}
             </div>
-            {SpeechRec && (
-              <button
-                className={`send-btn voice ${recording ? 'rec' : ''}`}
-                title={recording ? t('voice.stop') : t('voice.start')}
-                onClick={toggleMic}
-              >
-                <Icon name="mic" size={14} />
-              </button>
-            )}
             {running ? (
               <button className="send-btn stop" onClick={() => void st.cancel(activeId)}>
                 <Icon name="stop" size={14} /> <span className="send-label">{t('chat.stop')}</span>
