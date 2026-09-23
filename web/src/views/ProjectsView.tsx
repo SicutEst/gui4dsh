@@ -149,10 +149,12 @@ export function ProjectsView() {
                     }
                   }}>{t('projects.rename')}</button>
                   <button className="btn sm" onClick={() => {
-                    void dshOk('session.openWorkspacePath', { path: w.path })
+                    // the RPC can hang forever when dsh runs as a service
+                    // (explorer in session 0) — race it against a short timer
+                    const attempt = dshOk('session.openWorkspacePath', { path: w.path });
+                    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
+                    void Promise.race([attempt, timeout])
                       .catch(async () => {
-                        // dsh running as a service cannot open a desktop window —
-                        // fall back to copying the path for the address bar
                         try { await navigator.clipboard.writeText(w.path); } catch { /* ignore */ }
                         st.toast('info', t('projects.openDirFallback'), w.path);
                       });
