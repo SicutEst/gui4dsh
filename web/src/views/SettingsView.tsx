@@ -153,8 +153,32 @@ export function SettingsView() {
     }, []);
     if (!settings) return <div style={{ color: 'var(--faint)' }}>{t('common.loading')}</div>;
     return (
-      <div className="settings-cards2">
+      <div className="settings-cards-col">
         <FrpCard settings={settings} onChange={(patch) => setSettings({ ...settings, ...patch } as GatewaySettings)} />
+        <div className="card frp-guide">
+          <label>{t('frp.guideTitle')}</label>
+          <p className="frp-intro">{t('frp.intro')}</p>
+          <ol className="frp-steps">
+            <li>{t('frp.step1')}</li>
+            <li>{t('frp.step2')}</li>
+            <li>{t('frp.step3')}</li>
+            <li>{t('frp.step4')}</li>
+            <li>{t('frp.step5')}</li>
+          </ol>
+          <div className="frp-links">
+            <a href="https://github.com/fatedier/frp/releases" target="_blank" rel="noreferrer">
+              <Icon name="download" size={12} /> frp 官方下载（GitHub Releases）
+            </a>
+            <a href="https://gh-proxy.com/https://github.com/fatedier/frp/releases" target="_blank" rel="noreferrer">
+              <Icon name="download" size={12} /> 国内加速下载（GitHub 打不开时用）
+            </a>
+          </div>
+          <p className="frp-note">{t('frp.note')}</p>
+          <details className="frp-server-conf">
+            <summary>{t('frp.serverConfTitle')}</summary>
+            <pre>{t('frp.serverConf')}</pre>
+          </details>
+        </div>
       </div>
     );
   }

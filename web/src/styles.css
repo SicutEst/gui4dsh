@@ -784,3 +784,24 @@ textarea.json {
 .idle-row .idle-prompt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .idle-row .idle-meta { font-size: 11px; color: var(--faint); flex-shrink: 0; }
 .settings-cards-col { display: flex; flex-direction: column; gap: 14px; }
+
+/* ---- FRP guide ---- */
+.frp-guide { font-size: 13px; }
+.frp-guide > label { font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 8px; }
+.frp-intro { color: var(--dim, #555); line-height: 1.7; margin: 0 0 10px; font-size: 12.5px; }
+.frp-steps { margin: 0 0 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.frp-steps li { line-height: 1.6; }
+.frp-links { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.frp-links a {
+  display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 8px; color: var(--accent);
+  font-size: 12.5px; text-decoration: none;
+}
+.frp-links a:hover { border-color: var(--accent); background: var(--accent-soft); }
+.frp-note { color: var(--faint); font-size: 11.5px; margin: 0 0 10px; }
+.frp-server-conf summary { cursor: pointer; color: var(--dim, #555); font-size: 12.5px; }
+.frp-server-conf pre {
+  margin: 8px 0 0; padding: 10px 12px; background: var(--bg-hover, rgba(127,127,150,0.06));
+  border-radius: 8px; font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace;
+  white-space: pre-wrap; word-break: break-all;
+}
