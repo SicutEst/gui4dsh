@@ -148,7 +148,15 @@ export function ProjectsView() {
                       void dshOk('workspace.rename', { workspaceId: w.workspaceId, title: name.trim() }).then(() => st.refreshWorkspaces());
                     }
                   }}>{t('projects.rename')}</button>
-                  <button className="btn sm" onClick={() => void dshOk('host.openPath', { path: w.path }).catch((e) => st.toast('error', e.message))}>
+                  <button className="btn sm" onClick={() => {
+                    void dshOk('session.openWorkspacePath', { path: w.path })
+                      .catch(async () => {
+                        // dsh running as a service cannot open a desktop window —
+                        // fall back to copying the path for the address bar
+                        try { await navigator.clipboard.writeText(w.path); } catch { /* ignore */ }
+                        st.toast('info', t('projects.openDirFallback'), w.path);
+                      });
+                  }}>
                     {t('projects.openDir')}
                   </button>
                   <button className="btn sm danger" onClick={async () => {
