@@ -166,7 +166,7 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
 
   app.get('/ws', { websocket: true }, (socket) => {
     sockets.add(socket as unknown as WebSocket);
-    socket.send(JSON.stringify({ t: 'hello', dsh: manager.getStatus(), version: '0.1.0' }));
+    socket.send(JSON.stringify({ t: 'hello', dsh: manager.getStatus(), version: '0.2.0' }));
     // replay the live control baseline (queues/jobs/projections) missed before this client attached
     for (const frame of dsh.controlSnapshot()) socket.send(JSON.stringify({ t: 'dsh:mux', frame }));
     socket.on('close', () => sockets.delete(socket as unknown as WebSocket));
@@ -176,7 +176,7 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
   bus.on((ev) => broadcast({ t: ev.type, ...ev }));
 
   // ---------- gateway (fe) API ----------
-  app.get('/api/fe/verify', async () => ({ ok: true, locale: store.data.settings.locale, version: '0.1.0' }));
+  app.get('/api/fe/verify', async () => ({ ok: true, locale: store.data.settings.locale, version: '0.2.0' }));
 
   app.get('/api/fe/health', async () => ({
     dsh: manager.getStatus(),

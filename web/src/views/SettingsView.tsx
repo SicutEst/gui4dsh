@@ -484,7 +484,7 @@ export function SettingsView() {
         <p style={{ lineHeight: 1.8, color: 'var(--dim)' }}>{t('settings.aboutText')}</p>
         <div className="kv" style={{ marginTop: 12 }}>
           <span className="k">gui4dsh</span>
-          <span className="badge">v0.1.0</span>
+          <span className="badge">v0.2.0</span>
         </div>
         {dshVersion && (
           <div className="kv">

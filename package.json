@@ -1,7 +1,7 @@
 {
   "name": "gui4dsh",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Web frontend for dsh (DeepSeek Harness) with mobile remote access",
   "workspaces": [
     "server",

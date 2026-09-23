@@ -36,7 +36,7 @@ const pkgJson = {
   engines: { node: '>=20' },
   dependencies: serverPkg.dependencies,
   files: ['bin/', 'server/dist/', 'web/dist/'],
-  repository: { type: 'git', url: '' },
+  repository: { type: 'git', url: 'git+https://github.com/SicutEst/gui4dsh.git' },
 };
 fs.writeFileSync(path.join(out, 'package.json'), JSON.stringify(pkgJson, null, 2));
 
