@@ -249,6 +249,8 @@ export function SettingsView() {
     const [rows, setRows] = useState<ProviderRow[] | null>(null);
     const [form, setForm] = useState({ id: '', baseURL: '', apiKey: '', api: 'openai-completions', models: '' });
     const [busy, setBusy] = useState(false);
+    const [keyEdit, setKeyEdit] = useState<string | null>(null);
+    const [keyDraft, setKeyDraft] = useState<Record<string, string>>({});
 
     const load = async () => {
       const provs = await dshCall<Array<{ id: string; name: string }>>('llm.listProviders', {});
@@ -322,15 +324,50 @@ export function SettingsView() {
           <p style={{ fontSize: 12, color: 'var(--faint)', margin: '6px 0 10px' }}>{t('settings.llmHint')}</p>
           {rows === null && <div style={{ color: 'var(--faint)' }}>{t('common.loading')}</div>}
           {rows?.map((r) => (
-            <div key={r.id} className="idle-row" style={{ marginBottom: 6 }}>
-              <span className={`dot ${r.models > 0 ? 'ok' : 'bad'}`} style={{ width: 8, height: 8, borderRadius: 4, flexShrink: 0 }} />
-              <span style={{ fontWeight: 600 }}>{r.name}</span>
-              <span className="mono" style={{ fontSize: 11, color: 'var(--faint)' }}>{r.id}</span>
-              <div style={{ flex: 1 }} />
-              <span style={{ fontSize: 11, color: 'var(--faint)' }}>
-                {r.models} {t('settings.llmModels')}
-                {r.keyRef ? (r.keySet ? ` · ${t('settings.llmKeySet')}` : ` · ${t('settings.llmKeyMissing')} (${r.keyRef})`) : ''}
-              </span>
+            <div key={r.id} style={{ marginBottom: 6 }}>
+              <div className="idle-row">
+                <span className={`dot ${r.models > 0 ? 'ok' : 'bad'}`} style={{ width: 8, height: 8, borderRadius: 4, flexShrink: 0 }} />
+                <span style={{ fontWeight: 600 }}>{r.name}</span>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--faint)' }}>{r.id}</span>
+                <div style={{ flex: 1 }} />
+                <span style={{ fontSize: 11, color: 'var(--faint)' }}>
+                  {r.models} {t('settings.llmModels')}
+                  {r.keyRef ? (r.keySet ? ` · ${t('settings.llmKeySet')}` : ` · ${t('settings.llmKeyMissing')}`) : ''}
+                </span>
+                {r.keyRef && (
+                  <button className="btn sm" onClick={() => setKeyEdit(keyEdit === r.id ? null : r.id)}>
+                    <Icon name="lock" size={11} /> {r.keySet ? t('settings.llmKeyChange') : t('settings.llmKeyAdd')}
+                  </button>
+                )}
+              </div>
+              {keyEdit === r.id && r.keyRef && (
+                <div style={{ display: 'flex', gap: 8, padding: '6px 2px 2px 18px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span className="mono" style={{ fontSize: 11, color: 'var(--faint)' }}>{r.keyRef}</span>
+                  <input
+                    className="input"
+                    type="password"
+                    style={{ flex: '1 1 200px' }}
+                    placeholder={t('settings.llmKeyPh')}
+                    value={keyDraft[r.id] || ''}
+                    onChange={(e) => setKeyDraft({ ...keyDraft, [r.id]: e.target.value })}
+                  />
+                  <button
+                    className="btn sm primary"
+                    disabled={!(keyDraft[r.id] || '').trim()}
+                    onClick={async () => {
+                      const cs = await dshCall('credentials.set', { ref: r.keyRef, value: (keyDraft[r.id] || '').trim() });
+                      if (cs.ok) {
+                        setKeyDraft({ ...keyDraft, [r.id]: '' });
+                        setKeyEdit(null);
+                        st.toast('success', t('settings.llmKeySaved'));
+                        await load();
+                      } else st.toast('error', cs.error?.message || 'set failed');
+                    }}
+                  >
+                    {t('common.save')}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
