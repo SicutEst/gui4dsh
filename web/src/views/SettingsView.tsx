@@ -19,6 +19,21 @@ interface NamespaceView {
   revision: number;
 }
 
+/** Preset catalogue for the add-provider form: mainstream OpenAI-compatible endpoints. */
+const LLM_PRESETS: Array<{ key: string; name: string; id: string; baseURL: string; api: string; models: string; keyPh?: string }> = [
+  { key: 'siliconflow', name: '硅基流动 SiliconFlow', id: 'siliconflow', baseURL: 'https://api.siliconflow.cn/v1', api: 'openai-completions', models: 'deepseek-ai/DeepSeek-V3.2-Exp | DeepSeek V3.2\nQwen/Qwen3-235B-A22B | Qwen3 235B\nmoonshotai/Kimi-K2-Instruct | Kimi K2' },
+  { key: 'zhipu', name: '智谱 GLM（开放平台）', id: 'zhipu', baseURL: 'https://open.bigmodel.cn/api/paas/v4', api: 'openai-completions', models: 'glm-4.7 | GLM-4.7\nglm-4.7-flash | GLM-4.7 Flash' },
+  { key: 'moonshot', name: '月之暗面 Kimi', id: 'moonshot', baseURL: 'https://api.moonshot.cn/v1', api: 'openai-completions', models: 'kimi-k2 | Kimi K2\nmoonshot-v1-128k | Moonshot 128K' },
+  { key: 'dashscope', name: '阿里通义千问', id: 'dashscope', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', api: 'openai-completions', models: 'qwen3-max | Qwen3 Max\nqwen3-plus | Qwen3 Plus' },
+  { key: 'deepseek', name: 'DeepSeek 官方', id: 'deepseek-api', baseURL: 'https://api.deepseek.com/v1', api: 'openai-completions', models: 'deepseek-chat | DeepSeek Chat\ndeepseek-reasoner | DeepSeek Reasoner' },
+  { key: 'openai', name: 'OpenAI', id: 'openai', baseURL: 'https://api.openai.com/v1', api: 'openai-completions', models: 'gpt-5.2 | GPT-5.2\ngpt-5-mini | GPT-5 mini' },
+  { key: 'anthropic', name: 'Anthropic Claude', id: 'anthropic', baseURL: 'https://api.anthropic.com', api: 'anthropic-messages', models: 'claude-sonnet-4-5 | Claude Sonnet 4.5\nclaude-opus-4-5 | Claude Opus 4.5' },
+  { key: 'gemini', name: 'Google Gemini', id: 'gemini', baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai', api: 'openai-completions', models: 'gemini-3-pro | Gemini 3 Pro\ngemini-3-flash | Gemini 3 Flash' },
+  { key: 'grok', name: 'xAI Grok', id: 'grok', baseURL: 'https://api.x.ai/v1', api: 'openai-completions', models: 'grok-4 | Grok 4\ngrok-4-fast | Grok 4 Fast' },
+  { key: 'openrouter', name: 'OpenRouter（聚合）', id: 'openrouter', baseURL: 'https://openrouter.ai/api/v1', api: 'openai-completions', models: 'deepseek/deepseek-chat | DeepSeek Chat\nanthropic/claude-sonnet-4.5 | Sonnet 4.5\nopenrouter/auto | Auto Route' },
+  { key: 'ollama', name: '本地 Ollama', id: 'ollama', baseURL: 'http://127.0.0.1:11434/v1', api: 'openai-completions', models: 'qwen3:14b | Qwen3 14B\nllama3.1:8b | Llama 3.1 8B', keyPh: '（本地服务通常留空）' },
+];
+
 export function SettingsView() {
   const { t, locale, setLocale } = useI18n();
   const st = useStore();
@@ -271,6 +286,17 @@ export function SettingsView() {
     const [busy, setBusy] = useState(false);
     const [keyEdit, setKeyEdit] = useState<string | null>(null);
     const [keyDraft, setKeyDraft] = useState<Record<string, string>>({});
+    const [preset, setPreset] = useState<string>('');
+
+    const applyPreset = (key: string) => {
+      setPreset(key);
+      if (key === 'custom') {
+        setForm({ id: '', baseURL: '', apiKey: '', api: 'openai-completions', models: '' });
+        return;
+      }
+      const p = LLM_PRESETS.find((x) => x.key === key);
+      if (p) setForm({ id: p.id, baseURL: p.baseURL, apiKey: '', api: p.api, models: p.models });
+    };
 
     const load = async () => {
       const provs = await dshCall<Array<{ id: string; name: string }>>('llm.listProviders', {});
@@ -393,6 +419,13 @@ export function SettingsView() {
         </div>
         <div className="field" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
           <label>{t('settings.llmAddTitle')}</label>
+          <select className="input" style={{ marginBottom: 8 }} value={preset} onChange={(e) => applyPreset(e.target.value)}>
+            <option value="">{t('settings.llmPresetPh')}</option>
+            {LLM_PRESETS.map((p) => (
+              <option key={p.key} value={p.key}>{p.name}</option>
+            ))}
+            <option value="custom">{t('settings.llmPresetOther')}</option>
+          </select>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input className="input" style={{ flex: '1 1 140px' }} placeholder={t('settings.llmIdPh')} value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} />
             <input className="input" style={{ flex: '2 1 240px' }} placeholder="https://api.example.com/v1" value={form.baseURL} onChange={(e) => setForm({ ...form, baseURL: e.target.value })} />
