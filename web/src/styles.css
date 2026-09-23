@@ -805,3 +805,6 @@ textarea.json {
   border-radius: 8px; font-size: 11.5px; font-family: ui-monospace, Menlo, Consolas, monospace;
   white-space: pre-wrap; word-break: break-all;
 }
+.frp-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.frp-table th, .frp-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: top; }
+.frp-table th { background: var(--bg-hover, rgba(127,127,150,0.06)); font-size: 11.5px; color: var(--faint); }

@@ -158,6 +158,48 @@ export function SettingsView() {
         <div className="card frp-guide">
           <label>{t('frp.guideTitle')}</label>
           <p className="frp-intro">{t('frp.intro')}</p>
+
+          <details className="frp-server-conf">
+            <summary>{t('frp.routeTitle')}</summary>
+            <table className="frp-table">
+              <thead><tr><th></th><th>{t('frp.routeCost')}</th><th>{t('frp.routeNeed')}</th><th>{t('frp.routeBest')}</th></tr></thead>
+              <tbody>
+                <tr><td><b>{t('frp.routeV6')}</b></td><td>{t('frp.routeV6Cost')}</td><td>{t('frp.routeV6Need')}</td><td>{t('frp.routeV6Best')}</td></tr>
+                <tr><td><b>FRP</b></td><td>{t('frp.routeFrpCost')}</td><td>{t('frp.routeFrpNeed')}</td><td>{t('frp.routeFrpBest')}</td></tr>
+                <tr><td><b>Cloudflare</b></td><td>{t('frp.routeCfCost')}</td><td>{t('frp.routeCfNeed')}</td><td>{t('frp.routeCfBest')}</td></tr>
+              </tbody>
+            </table>
+            <p className="frp-note" style={{ marginTop: 8 }}>{t('frp.routeHint')}</p>
+          </details>
+
+          <details className="frp-server-conf">
+            <summary>{t('frp.step0Title')}</summary>
+            <p className="frp-note">{t('frp.step0Body')}</p>
+            <div className="frp-links">
+              <a href="https://www.aliyun.com/product/ecs" target="_blank" rel="noreferrer">
+                <Icon name="external" size={12} /> {t('frp.regAliyun')}
+              </a>
+              <a href="https://cloud.tencent.com/product/cvm" target="_blank" rel="noreferrer">
+                <Icon name="external" size={12} /> {t('frp.regTencent')}
+              </a>
+            </div>
+            <p className="frp-note">{t('frp.step0Firewall')}</p>
+          </details>
+
+          <details className="frp-server-conf">
+            <summary>{t('frp.domainTitle')}</summary>
+            <p className="frp-note">{t('frp.domainBody')}</p>
+            <div className="frp-links">
+              <a href="https://www.dnspod.cn" target="_blank" rel="noreferrer">
+                <Icon name="external" size={12} /> {t('frp.regDnspod')}
+              </a>
+              <a href="https://wanwang.aliyun.com" target="_blank" rel="noreferrer">
+                <Icon name="external" size={12} /> {t('frp.regWanwang')}
+              </a>
+            </div>
+            <p className="frp-note">{t('frp.domainNote')}</p>
+          </details>
+
           <ol className="frp-steps">
             <li>{t('frp.step1')}</li>
             <li>{t('frp.step2')}</li>
@@ -176,7 +218,9 @@ export function SettingsView() {
           <p className="frp-note">{t('frp.note')}</p>
           <details className="frp-server-conf">
             <summary>{t('frp.serverConfTitle')}</summary>
+            <p className="frp-note">{t('frp.serverConfHow')}</p>
             <pre>{t('frp.serverConf')}</pre>
+            <p className="frp-note">{t('frp.serverConfFirewall')}</p>
           </details>
         </div>
       </div>
