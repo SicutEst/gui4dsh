@@ -218,13 +218,9 @@ class DshClient {
       const msg = (await res.json().catch(() => null)) as any;
       const result = msg?.result;
       if (result === undefined) return { ok: false, error: { code: 'internal', message: `malformed response (${res.status})` } };
+      // any args-shape rejection advances the ladder: {_request} → {request} → flat → {}
       if (!result.ok && result.error?.code === 'gateway/arguments-invalid' && argsTry < 3) {
-        const m = String(result.error.message || '');
-        const missing = /missing "([a-zA-Z_]+)"/.exec(m);
-        const wantsOtherName = (missing && missing[1] !== '_request') || m.includes('unexpected "_request"');
-        // both named forms rejected and the complaint is about an unexpected field -> try flat, then empty args
-        const wantsEmpty = argsTry === 2 && (m.includes('unexpected') && !missing);
-        if (wantsOtherName || wantsEmpty) return this.unary<T>(endpoint, payload, argsTry + 1);
+        return this.unary<T>(endpoint, payload, argsTry + 1);
       }
       markUp();
       return result as RpcResult<T>;

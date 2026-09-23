@@ -117,6 +117,7 @@ export function SettingsView() {
 
         <PushCard settings={settings} onChange={(patch) => setSettings({ ...settings, ...patch } as GatewaySettings)} />
         <BrowserCard />
+        <ProvidersCard />
 
         <FrpCard settings={settings} onChange={(patch) => setSettings({ ...settings, ...patch } as GatewaySettings)} />
       </div>
@@ -207,8 +208,7 @@ export function SettingsView() {
     );
   }
 
-  function BrowserCard() {
-    const [enabled, setEnabled] = useState(false);
+  function BrowserCard() {    const [enabled, setEnabled] = useState(false);
     const [busy, setBusy] = useState(false);
     useEffect(() => {
       fe.browserStatus().then((r) => setEnabled(!!(r as any).enabled));
@@ -239,6 +239,128 @@ export function SettingsView() {
           >
             {busy ? t('common.loading') : enabled ? t('settings.browserDisable') : t('settings.browserEnable')}
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  function ProvidersCard() {
+    interface ProviderRow { id: string; name: string; models: number; keyRef?: string; keySet?: boolean }
+    const [rows, setRows] = useState<ProviderRow[] | null>(null);
+    const [form, setForm] = useState({ id: '', baseURL: '', apiKey: '', api: 'openai-completions', models: '' });
+    const [busy, setBusy] = useState(false);
+
+    const load = async () => {
+      const provs = await dshCall<Array<{ id: string; name: string }>>('llm.listProviders', {});
+      const cat = await dshCall<{ groups: Array<{ id: string; models: unknown[] }> }>('session.modelCatalog', {});
+      const desc = await dshCall<{ namespaces: Array<{ ns: string; value: any }> }>('settings.describe', {});
+      if (!provs.ok) return;
+      const groups = cat.ok ? ((cat.value as any)?.groups || (cat.value as any)?.value?.groups || []) : [];
+      const piNs = desc.ok ? (desc.value?.namespaces || []).find((n) => n.ns === 'llm-pi-ai') : undefined;
+      const piProviders = (piNs?.value as any)?.providers || {};
+      const refOf = (id: string) => (id === 'deepseek-official' ? 'DEEPSEEK_API_KEY' : piProviders[id]?.apiKeyEnv) as string | undefined;
+      const refs = (provs.value || []).map((p) => refOf(p.id)).filter(Boolean) as string[];
+      const cd = refs.length ? await dshCall<Record<string, { configured: boolean }>>('credentials.describe', { refs }) : null;
+      const cdMap = cd?.ok ? ((cd.value as any) || {}) : {};
+      setRows((provs.value || []).map((p) => {
+        const keyRef = refOf(p.id);
+        return {
+          id: p.id,
+          name: p.name,
+          models: groups.find((g: any) => g.id === p.id)?.models?.length || 0,
+          keyRef,
+          keySet: keyRef ? !!cdMap[keyRef]?.configured : undefined,
+        };
+      }));
+    };
+
+    useEffect(() => {
+      void load();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const addProvider = async () => {
+      const id = form.id.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+      if (!id || !form.baseURL.trim() || !form.models.trim()) return;
+      setBusy(true);
+      try {
+        const keyRef = `${id.replace(/-/g, '_').toUpperCase()}_API_KEY`;
+        // merge into the existing llm-pi-ai providers map (preserve siblings)
+        const desc = await dshCall<{ namespaces: Array<{ ns: string; value: any; revision: number }> }>('settings.describe', {});
+        const ns = desc.ok ? (desc.value?.namespaces || []).find((n) => n.ns === 'llm-pi-ai') : undefined;
+        const cur = (ns?.value as any) || {};
+        const models = form.models.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
+          const [mid, mname] = l.split('|').map((x) => x.trim());
+          return { id: mid, name: mname || mid };
+        });
+        const providers = { ...(cur.providers || {}), [id]: { api: form.api, baseURL: form.baseURL.trim(), apiKeyEnv: keyRef, models } };
+        const upd = await dshCall('settings.update', {
+          ns: 'llm-pi-ai',
+          patch: { ...cur, providers },
+          expectedRevision: ns?.revision,
+        });
+        if (!upd.ok) {
+          st.toast('error', upd.error?.message || 'settings.update failed');
+          return;
+        }
+        if (form.apiKey.trim()) {
+          const cs = await dshCall('credentials.set', { ref: keyRef, value: form.apiKey.trim() });
+          if (!cs.ok) st.toast('error', cs.error?.message || 'credentials.set failed');
+        }
+        setForm({ id: '', baseURL: '', apiKey: '', api: 'openai-completions', models: '' });
+        st.toast('success', t('settings.llmAdded'));
+        await load();
+      } finally {
+        setBusy(false);
+      }
+    };
+
+    return (
+      <div className="card">
+        <div className="field">
+          <label>{t('settings.llmTitle')}</label>
+          <p style={{ fontSize: 12, color: 'var(--faint)', margin: '6px 0 10px' }}>{t('settings.llmHint')}</p>
+          {rows === null && <div style={{ color: 'var(--faint)' }}>{t('common.loading')}</div>}
+          {rows?.map((r) => (
+            <div key={r.id} className="idle-row" style={{ marginBottom: 6 }}>
+              <span className={`dot ${r.models > 0 ? 'ok' : 'bad'}`} style={{ width: 8, height: 8, borderRadius: 4, flexShrink: 0 }} />
+              <span style={{ fontWeight: 600 }}>{r.name}</span>
+              <span className="mono" style={{ fontSize: 11, color: 'var(--faint)' }}>{r.id}</span>
+              <div style={{ flex: 1 }} />
+              <span style={{ fontSize: 11, color: 'var(--faint)' }}>
+                {r.models} {t('settings.llmModels')}
+                {r.keyRef ? (r.keySet ? ` · ${t('settings.llmKeySet')}` : ` · ${t('settings.llmKeyMissing')} (${r.keyRef})`) : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="field" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+          <label>{t('settings.llmAddTitle')}</label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input className="input" style={{ flex: '1 1 140px' }} placeholder={t('settings.llmIdPh')} value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} />
+            <input className="input" style={{ flex: '2 1 240px' }} placeholder="https://api.example.com/v1" value={form.baseURL} onChange={(e) => setForm({ ...form, baseURL: e.target.value })} />
+            <select className="input" style={{ flex: '0 1 200px' }} value={form.api} onChange={(e) => setForm({ ...form, api: e.target.value })} title={t('settings.llmApiPh')}>
+              <option value="openai-completions">OpenAI 兼容 (chat/completions)</option>
+              <option value="openai-responses">OpenAI Responses</option>
+              <option value="anthropic-messages">Anthropic Messages</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            <input className="input" type="password" style={{ flex: '1 1 180px' }} placeholder={t('settings.llmKeyPh')} value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} />
+          </div>
+          <textarea
+            className="input mono"
+            style={{ marginTop: 8, minHeight: 64, fontSize: 12 }}
+            placeholder={t('settings.llmModelsPh')}
+            value={form.models}
+            onChange={(e) => setForm({ ...form, models: e.target.value })}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+            <button className="btn sm primary" disabled={busy || !form.id.trim() || !form.baseURL.trim() || !form.models.trim()} onClick={() => void addProvider()}>
+              <Icon name="plus" size={12} /> {t('settings.llmAdd')}
+            </button>
+            <span style={{ fontSize: 11, color: 'var(--faint)' }}>{t('settings.llmAddHint')}</span>
+          </div>
         </div>
       </div>
     );
