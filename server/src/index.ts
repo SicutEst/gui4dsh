@@ -127,6 +127,29 @@ async function main(): Promise<void> {
   ddns.init();
   acmeTls.init();
 
+  // watchdog: a wedged dsh (alive process, dead port) leaves every session
+  // list empty with no self-recovery — probe it and recycle when unresponsive
+  {
+    let misses = 0;
+    const firstProbeAt = Date.now();
+    setInterval(() => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
+      fetch(`${process.env.DSH_URL || 'http://127.0.0.1:34180'}/`, { signal: ctrl.signal })
+        .then(() => { misses = 0; })
+        .catch(() => {
+          misses++;
+          if (misses === 1 && Date.now() - firstProbeAt < 90_000) { misses = 0; return; } // booting
+          if (misses >= 3) {
+            console.log(`[watchdog] dsh unresponsive ${misses}x — recycling`);
+            misses = 0;
+            manager.killDshNow();
+          }
+        })
+        .finally(() => clearTimeout(timer));
+    }, 60_000).unref?.();
+  }
+
   const app = await buildServer(port);
   await app.listen({ port, host: '::' }); // dual-stack: public IPv6 can reach us directly
 
