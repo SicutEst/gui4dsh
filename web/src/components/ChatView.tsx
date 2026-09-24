@@ -133,6 +133,30 @@ export function ChatView() {
     taRef.current?.focus();
   };
 
+  // turn status bar (hooks must stay above the early return): while a turn
+  // runs, show elapsed time and the current activity so long silent
+  // stretches (collapsed reasoning, slow tools) never look like a dead page
+  const running = !!session?.running || !!chat?.streaming;
+  const [turnElapsed, setTurnElapsed] = useState(0);
+  useEffect(() => {
+    if (!running) return;
+    const start = Date.now();
+    const iv = setInterval(() => setTurnElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, [running, activeId]);
+  const currentActivity = useMemo(() => {
+    if (!chat) return t('chat.workingWaiting');
+    const items = chat.items;
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i];
+      if (it.kind === 'tool' && it.pending) return t('chat.workingTool', { name: it.name || 'tool' });
+      if (it.kind === 'tool' && !it.pending) continue;
+      if (it.kind === 'assistant') return t('chat.workingThinking');
+    }
+    return t('chat.workingWaiting');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat?.items, chat?.items?.length, chat]);
+
   if (!activeId || !session) {
     return (
       <div className="chat">
@@ -158,7 +182,6 @@ export function ChatView() {
 
   const ws = workspaces.find((w) => w.sessionIds.includes(activeId));
   const cwd = session.cwd || ws?.path || '';
-  const running = session.running || !!chat?.streaming;
 
   const doSend = () => {
     const text = input.trim();
@@ -496,6 +519,15 @@ export function ChatView() {
       )}
 
       <div className="composer-wrap">
+        {running && (
+          <div className="turn-status">
+            <span className="ts-dot" />
+            <span className="ts-text">{t('chat.workingBar')}</span>
+            <span className="ts-elapsed">{turnElapsed}s</span>
+            <span className="ts-sep">·</span>
+            <span className="ts-activity">{currentActivity}</span>
+          </div>
+        )}
         {goal && (
           <div className={`goal-bar ph-${goal.goal?.phase || 'active'}`}>
             <Icon name="flag" size={12} />

@@ -808,3 +808,16 @@ textarea.json {
 .frp-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
 .frp-table th, .frp-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: top; }
 .frp-table th { background: var(--bg-hover, rgba(127,127,150,0.06)); font-size: 11.5px; color: var(--faint); }
+
+/* ---- turn status bar ---- */
+.turn-status {
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  margin: 0 2px 8px; border-radius: 10px; font-size: 12px;
+  background: var(--accent-soft); color: var(--accent);
+  border: 1px solid rgba(77, 107, 254, 0.25);
+}
+.ts-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: traj-pulse 1.2s ease-in-out infinite; flex-shrink: 0; }
+.ts-text { font-weight: 700; }
+.ts-elapsed { font-variant-numeric: tabular-nums; font-weight: 600; }
+.ts-sep { opacity: 0.5; }
+.ts-activity { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
