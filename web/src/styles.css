@@ -823,10 +823,11 @@ textarea.json {
 .ts-activity { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---- chat jump buttons ---- */
-.chat-main { position: relative; }
+.composer-wrap { position: relative; }
 .chat-jumps {
-  position: absolute; right: 14px; bottom: 16px; z-index: 15;
-  display: flex; flex-direction: column; gap: 8px;
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: calc(100% + 4px); z-index: 15;
+  display: flex; flex-direction: row; gap: 10px;
 }
 .chat-jump {
   width: 36px; height: 36px; border-radius: 50%;

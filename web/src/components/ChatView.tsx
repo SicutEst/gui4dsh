@@ -529,31 +529,30 @@ export function ChatView() {
       </div>
       )}
 
-      <div className="chat-jumps">
-        {!atTop && (
-          <button className="chat-jump" title={t('chat.jumpTop')} onClick={() => {
-            stickBottom.current = false;
-            scrollRef.current?.scrollTo({ top: 0 });
-            setAtTop(true);
-            setAtBottom(false);
-          }}>
-            <Icon name="chevronUp" size={15} />
-          </button>
-        )}
-        {!atBottom && (
-          <button className="chat-jump" title={t('chat.jumpEnd')} onClick={() => {
-            stickBottom.current = true;
-            const el = scrollRef.current;
-            if (el) el.scrollTop = el.scrollHeight;
-            setAtTop(false);
-            setAtBottom(true);
-          }}>
-            <Icon name="chevronDown" size={15} />
-          </button>
-        )}
-      </div>
-
       <div className="composer-wrap">
+        <div className="chat-jumps">
+          {!atTop && (
+            <button className="chat-jump" title={t('chat.jumpTop')} onClick={() => {
+              stickBottom.current = false;
+              scrollRef.current?.scrollTo({ top: 0 });
+              setAtTop(true);
+              setAtBottom(false);
+            }}>
+              <Icon name="chevronUp" size={15} />
+            </button>
+          )}
+          {!atBottom && (
+            <button className="chat-jump" title={t('chat.jumpEnd')} onClick={() => {
+              stickBottom.current = true;
+              const el = scrollRef.current;
+              if (el) el.scrollTop = el.scrollHeight;
+              setAtTop(false);
+              setAtBottom(true);
+            }}>
+              <Icon name="chevronDown" size={15} />
+            </button>
+          )}
+        </div>
         {running && (
           <div className="turn-status">
             <span className="ts-dot" />
