@@ -612,11 +612,19 @@ export const useStore = create<AppState>()(
       setComposerPreset: (text) => mutate((s) => void (s.composerPreset = text)),
 
       openSession: async (sid, silent = false) => {
+        const prevId = get().activeId;
         mutate((s) => {
           s.activeId = sid;
           if (!silent) {
             s.view = 'chat';
             s.sidebarOpen = false;
+            // the file panel is scoped to one session's workspace — following
+            // the user to an unrelated session's root silently reads wrong;
+            // close it on navigation (stays put on background resyncs)
+            if (prevId !== sid) {
+              s.filePanel = false;
+              s.filePreview = null;
+            }
           }
         });
         const existing = get().chats[sid];
