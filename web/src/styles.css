@@ -821,3 +821,18 @@ textarea.json {
 .ts-elapsed { font-variant-numeric: tabular-nums; font-weight: 600; }
 .ts-sep { opacity: 0.5; }
 .ts-activity { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- chat jump buttons ---- */
+.chat-main { position: relative; }
+.chat-jumps {
+  position: absolute; right: 14px; bottom: 16px; z-index: 15;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.chat-jump {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--border2); background: var(--surface);
+  color: var(--dim, #555); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow);
+}
+.chat-jump:hover { border-color: var(--accent); color: var(--accent); }

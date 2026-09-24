@@ -61,11 +61,17 @@ export function ChatView() {
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
-    if (el && stickBottom.current) el.scrollTop = el.scrollHeight;
+    if (el && stickBottom.current) {
+      el.scrollTop = el.scrollHeight;
+      setAtTop(false);
+      setAtBottom(true);
+    }
   }, [itemsLength, chat?.items[chat.items.length - 1]?.parts?.length, activeId]);
 
   useEffect(() => {
     stickBottom.current = true;
+    setAtTop(false);
+    setAtBottom(true);
   }, [activeId]);
 
   // composer preset (from skills view invoke)
@@ -137,6 +143,8 @@ export function ChatView() {
   // runs, show elapsed time and the current activity so long silent
   // stretches (collapsed reasoning, slow tools) never look like a dead page
   const running = !!session?.running || !!chat?.streaming;
+  const [atTop, setAtTop] = useState(true);
+  const [atBottom, setAtBottom] = useState(true);
   const [turnElapsed, setTurnElapsed] = useState(0);
   useEffect(() => {
     if (!running) return;
@@ -366,7 +374,10 @@ export function ChatView() {
         ref={scrollRef}
         onScroll={(e) => {
           const el = e.currentTarget;
-          stickBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+          const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+          stickBottom.current = gap < 60;
+          setAtTop(el.scrollTop < 60);
+          setAtBottom(gap < 60);
         }}
       >
         {chat?.hasMore && (
@@ -517,6 +528,30 @@ export function ChatView() {
         )}
       </div>
       )}
+
+      <div className="chat-jumps">
+        {!atTop && (
+          <button className="chat-jump" title={t('chat.jumpTop')} onClick={() => {
+            stickBottom.current = false;
+            scrollRef.current?.scrollTo({ top: 0 });
+            setAtTop(true);
+            setAtBottom(false);
+          }}>
+            <Icon name="chevronUp" size={15} />
+          </button>
+        )}
+        {!atBottom && (
+          <button className="chat-jump" title={t('chat.jumpEnd')} onClick={() => {
+            stickBottom.current = true;
+            const el = scrollRef.current;
+            if (el) el.scrollTop = el.scrollHeight;
+            setAtTop(false);
+            setAtBottom(true);
+          }}>
+            <Icon name="chevronDown" size={15} />
+          </button>
+        )}
+      </div>
 
       <div className="composer-wrap">
         {running && (

@@ -4,7 +4,7 @@ type IconName =
   | 'plus' | 'search' | 'chat' | 'zap' | 'command' | 'folder' | 'folderPlus' | 'chart' | 'hook'
   | 'gear' | 'qr' | 'send' | 'stop' | 'brain' | 'user' | 'bot' | 'terminal' | 'globe' | 'file'
   | 'check' | 'x' | 'copy' | 'pin' | 'fork' | 'archive' | 'pencil' | 'trash' | 'play' | 'refresh'
-  | 'eye' | 'shield' | 'alert' | 'info' | 'chevronDown' | 'chevronRight' | 'clock' | 'calendar'
+  | 'eye' | 'shield' | 'alert' | 'info' | 'chevronDown' | 'chevronUp' | 'chevronRight' | 'clock' | 'calendar'
   | 'list' | 'external' | 'sun' | 'moon' | 'lock' | 'home' | 'activity' | 'message' | 'phone'
   | 'download' | 'grid' | 'link' | 'sparkles' | 'flag' | 'wrench' | 'code'
   | 'thumbUp' | 'thumbDown' | 'timer';
@@ -44,6 +44,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   alert: <><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></>,
   info: <><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></>,
   chevronDown: <path d="M6 9l6 6 6-6" />,
+  chevronUp: <path d="M6 15l6-6 6 6" />,
   chevronRight: <path d="M9 18l6-6-6-6" />,
   clock: <><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></>,
   calendar: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>,
