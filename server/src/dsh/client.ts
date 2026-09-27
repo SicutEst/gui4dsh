@@ -56,6 +56,19 @@ function cookieHeader(): Record<string, string> {
   return authCookie ? { cookie: authCookie } : {};
 }
 
+/** Authenticated GET against dsh's own HTTP routes (changes.summary etc.). */
+export async function dshAuthedGet(path: string): Promise<{ status: number; body: unknown }> {
+  await ensureAuthCookie();
+  const res = await fetch(`${dshBaseUrl}${path}`, { headers: cookieHeader() });
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
+  return { status: res.status, body };
+}
+
 // ---------------------------------------------------------------------------
 // dsh 0.1.5 Typert gateway adaptation
 //   unary:   POST /api/<namespace>/<method>  body {type:'client-request', rpcId,

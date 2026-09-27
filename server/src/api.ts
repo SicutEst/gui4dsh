@@ -11,7 +11,7 @@ import * as idle from './idle.js';
 import * as browser from './browser.js';
 import { store } from './store.js';
 import { bus } from './bus.js';
-import { dsh } from './dsh/client.js';
+import { dsh, dshAuthedGet } from './dsh/client.js';
 import * as manager from './dsh/manager.js';
 import * as automations from './automations.js';
 import { testHook } from './hooks.js';
@@ -689,6 +689,14 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
     }
     const result = await dsh.call(method, req.body ?? {});
     return reply.send(result);
+  });
+
+  // per-turn workspace file changes: proxy dsh 0.1.7's authenticated summary route
+  app.get('/api/fe/changes/summary', async (req, reply) => {
+    const { sessionId, seq } = req.query as { sessionId?: string; seq?: string };
+    if (!sessionId || !seq) return reply.code(400).send({ error: 'sessionId and seq are required' });
+    const r = await dshAuthedGet(`/api/changes.summary?${new URLSearchParams({ sessionId, seq })}`);
+    return reply.code(r.status === 404 ? 404 : r.status === 200 ? 200 : 502).send(r.body ?? { error: 'upstream error' });
   });
 
   // SPA fallback

@@ -115,6 +115,7 @@ const TRAJ_TYPES = new Set([
   'user/message', 'assistant/message', 'system/message',
   'tool/call', 'tool/result',
   'permission/preset', 'sandbox/mode', 'approval/policy',
+  'workspace/changes',
 ]);
 
 function pushTraj(chat: WritableDraft<ChatState>, ev: SessionEvent): void {
@@ -164,6 +165,11 @@ function pushTraj(chat: WritableDraft<ChatState>, ev: SessionEvent): void {
     }
     case 'turn/end':
       data = { kind: ev.data?.reason?.kind, message: ev.data?.reason?.error?.message };
+      break;
+    case 'workspace/changes':
+      // the event carries only the turn no.; the file list is fetched from
+      // /api/fe/changes/summary with (sessionId, seq) on demand
+      data = { turn: ev.data?.turn };
       break;
     default:
       data = ev.data && typeof ev.data === 'object' ? { value: String((ev.data as any).preset || (ev.data as any).mode || (ev.data as any).policy || '').slice(0, 80) } : undefined;

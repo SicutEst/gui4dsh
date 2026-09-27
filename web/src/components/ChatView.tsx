@@ -5,6 +5,7 @@ import { dshCall } from '../api';
 import { AssistantMessageView, ContextRow, StreamingView, ToolCard, UserBubble } from './blocks';
 import { TrajectoryView } from './TrajectoryView';
 import { FileSidebar } from './FileSidebar';
+import { TurnChanges } from './TurnChanges';
 import { deriveDeliverables } from '../store';
 import { Icon } from './Icon';
 
@@ -26,6 +27,14 @@ export function ChatView() {
   });
   const runningJobs = (jobs || []).filter((j) => !j.finishedAt).length;
   const deliverables = useMemo(() => deriveDeliverables(chat?.traj || []), [chat?.traj]);
+  // per-turn workspace/changes events: turn -> announcing seq (for the summary fetch)
+  const turnChanges = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const ev of chat?.traj || []) {
+      if (ev.type === 'workspace/changes' && typeof ev.data?.turn === 'number') m.set(ev.data.turn, ev.seq);
+    }
+    return m;
+  }, [chat?.traj]);
   // last assistant item per turn number (reverse first-wins)
   const turnFinalSeq = useMemo(() => {
     const m = new Map<number, number>();
@@ -483,6 +492,9 @@ export function ChatView() {
                       </button>
                     ))}
                   </div>
+                )}
+                {!turnFiles && typeof item.turn === 'number' && turnChanges.has(item.turn) && activeId && (
+                  <TurnChanges sessionId={activeId} seq={turnChanges.get(item.turn)!} />
                 )}
               </div>
             );

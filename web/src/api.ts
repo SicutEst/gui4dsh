@@ -98,6 +98,10 @@ export const fe = {
   browserStatus: () => req<{ enabled: boolean; script: string }>('/api/fe/browser'),
   browserToggle: (enabled: boolean) =>
     req<{ ok: boolean; error?: string; restarted?: boolean }>('/api/fe/browser/toggle', { method: 'POST', body: JSON.stringify({ enabled }) }),
+  changesSummary: (sessionId: string, seq: number) =>
+    req<{ turn: number; files: Array<{ path: string; display: string; added: number; deleted: number }>; total: number; added: number; deleted: number }>(
+      `/api/fe/changes/summary?sessionId=${encodeURIComponent(sessionId)}&seq=${seq}`,
+    ),
   duckdnsBind: (token: string, domain: string, ip?: string, ipv6?: string) =>
     req<{ ok: boolean; response?: string; error?: string }>('/api/fe/duckdns/bind', { method: 'POST', body: JSON.stringify({ token, domain, ip, ipv6 }) }),
   duckdnsCheck: (host: string) =>
