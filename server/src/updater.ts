@@ -22,12 +22,14 @@ export function currentDshVersion(): string {
 
 async function latestDshVersion(): Promise<string | null> {
   try {
-    const res = await fetch('https://registry.npmjs.org/@deepseek-ai/dsh/latest', {
+    // prefer dist-tags.next (rc line, where 0.1.7+ lives) and fall back to latest;
+    // latest alone stayed on 0.1.5-rc.3 after dsh moved active dev to next
+    const res = await fetch('https://registry.npmjs.org/@deepseek-ai/dsh', {
       signal: AbortSignal.timeout(20_000),
     });
     if (!res.ok) return null;
-    const j = (await res.json()) as { version?: string };
-    return j.version ?? null;
+    const j = (await res.json()) as { 'dist-tags'?: { next?: string; latest?: string } };
+    return j['dist-tags']?.next ?? j['dist-tags']?.latest ?? null;
   } catch {
     return null;
   }

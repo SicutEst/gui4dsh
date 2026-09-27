@@ -196,7 +196,10 @@ class DshClient {
   private async unary<T>(endpoint: string, payload: any, argsTry = 0): Promise<RpcResult<T>> {
     const rpcId = mintRpcId();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 120_000);
+    // session/search rebuilds the query index on first use after an upgrade —
+    // a full pass over a large legacy corpus takes minutes; give it room
+    const timeoutMs = endpoint.endsWith('search') ? 600_000 : 120_000;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       await ensureAuthCookie();
       // attempt 0: {_request}, 1: {request}, 2: flat named fields, 3: {} (no-parameter endpoints)
@@ -219,7 +222,9 @@ class DshClient {
       const result = msg?.result;
       if (result === undefined) return { ok: false, error: { code: 'internal', message: `malformed response (${res.status})` } };
       // any args-shape rejection advances the ladder: {_request} → {request} → flat → {}
-      if (!result.ok && result.error?.code === 'gateway/arguments-invalid' && argsTry < 3) {
+      // (0.1.5 rejected with gateway/arguments-invalid; 0.1.7 splits wire-field
+      // validation into gateway/input-invalid — both mean "wrong shape")
+      if (!result.ok && (result.error?.code === 'gateway/arguments-invalid' || result.error?.code === 'gateway/input-invalid') && argsTry < 3) {
         return this.unary<T>(endpoint, payload, argsTry + 1);
       }
       markUp();
