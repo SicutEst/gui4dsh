@@ -56,8 +56,8 @@ function cookieHeader(): Record<string, string> {
   return authCookie ? { cookie: authCookie } : {};
 }
 
-/** Authenticated GET against dsh's own HTTP routes (changes.summary etc.). */
-export async function dshAuthedGet(path: string): Promise<{ status: number; body: unknown }> {
+  /** Authenticated GET against dsh's own HTTP routes (changes.summary etc.). */
+  export async function dshAuthedGet(path: string): Promise<{ status: number; body: unknown }> {
   await ensureAuthCookie();
   const res = await fetch(`${dshBaseUrl}${path}`, { headers: cookieHeader() });
   let body: unknown = null;
@@ -216,11 +216,21 @@ class DshClient {
     try {
       await ensureAuthCookie();
       // attempt 0: {_request}, 1: {request}, 2: flat named fields, 3: {} (no-parameter endpoints)
+      // attempt order by namespace: terminal.* and other agent-scoped RPCs take
+      // flat named fields ({agentId,...}); the rest start with the wrapped forms
+      const flatFirst = /^(terminal|account|pluginManager)\./.test(endpoint.split('/')[0] ?? '');
       let args: unknown;
-      if (argsTry === 0) args = { _request: payload ?? {} };
-      else if (argsTry === 1) args = { request: payload ?? {} };
-      else if (argsTry === 2) args = payload ?? {};
-      else args = {};
+      if (flatFirst) {
+        if (argsTry === 0) args = payload ?? {};
+        else if (argsTry === 1) args = { _request: payload ?? {} };
+        else if (argsTry === 2) args = { request: payload ?? {} };
+        else args = {};
+      } else {
+        if (argsTry === 0) args = { _request: payload ?? {} };
+        else if (argsTry === 1) args = { request: payload ?? {} };
+        else if (argsTry === 2) args = payload ?? {};
+        else args = {};
+      }
       const res = await fetch(`${dshBaseUrl}/api/${endpoint}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', ...cookieHeader() },
@@ -331,6 +341,90 @@ class DshClient {
     void this.openWs();
   }
 
+  // ------------------------- terminal streaming bridge -------------------------
+  // web clients subscribe over the gateway WS; we open agent-scoped mux streams
+  // (terminal/retain + terminal/follow) and pipe output frames back down
+
+  private termSubs = new Map<string, { streamIds: string[]; sockets: Set<WebSocket>; sessionId: string; termId: string; attachId: string }>();
+  private termFollows = new Map<string, string>(); // follow streamId -> reqId
+  private socketTerms = new Map<WebSocket, Set<string>>();
+
+  /**
+   * Subscribe one gateway-WS socket to a session terminal. Resolves after the
+   * follow stream is open (first snapshot frame usually arrives right after).
+   */
+  terminalSubscribe(socket: WebSocket, sessionId: string, termId: string): void {
+    this.ensureWs();
+    const reqId = termId + ':' + sessionId;
+    let sub = this.termSubs.get(reqId);
+    if (!sub) {
+      sub = { streamIds: [], sockets: new Set(), sessionId, termId, attachId: crypto.randomUUID() };
+      this.termSubs.set(reqId, sub);
+      // follow ONLY: the retain stream holds the terminal's controller slot and
+      // silently starves the follow stream of output frames
+      const followStreamId = this.nextStreamId('tf');
+      sub.streamIds.push(followStreamId);
+      this.termFollows.set(followStreamId, reqId);
+      this.sendWs({ type: 'open', streamId: followStreamId, endpoint: 'terminal/follow', payload: { args: { agentId: sessionId, id: termId, attachmentId: sub.attachId } } });
+    }
+    sub.sockets.add(socket);
+    (socket as any).__termReqs = (socket as any).__termReqs || new Set();
+    (socket as any).__termReqs.add(reqId);
+    if (!this.socketTerms.has(socket)) this.socketTerms.set(socket, new Set());
+    this.socketTerms.get(socket)!.add(reqId);
+  }
+
+  terminalUnsubscribe(socket: WebSocket, reqId?: string): void {
+    const reqIds = reqId ? [reqId] : Array.from(this.socketTerms.get(socket) || []);
+    for (const id of reqIds) {
+      const sub = this.termSubs.get(id);
+      if (!sub) continue;
+      sub.sockets.delete(socket);
+      if (sub.sockets.size === 0) {
+        for (const sid of sub.streamIds) {
+          try { this.sendWs({ type: 'cancel', streamId: sid }); } catch { /* closed */ }
+        }
+        this.termSubs.delete(id);
+      }
+    }
+    this.socketTerms.delete(socket);
+  }
+
+  /** Proxy one write into a subscribed terminal using the sub's attachment id. */
+  async terminalWrite(sessionId: string, termId: string, data: string): Promise<boolean> {
+    const sub = this.termSubs.get(termId + ':' + sessionId);
+    if (!sub) return false;
+    const r = await this.call('terminal.write', { agentId: sub.sessionId, id: sub.termId, attachmentId: sub.attachId, data });
+    return r.ok;
+  }
+
+  debugTermSubs(): Array<Record<string, unknown>> {
+    return [...this.termSubs.entries()].map(([reqId, sub]) => ({ reqId, sessionId: sub.sessionId, termId: sub.termId, sockets: sub.sockets.size, streams: sub.streamIds }));
+  }
+
+  /** Proxy one resize into a subscribed terminal. */
+  async terminalResize(sessionId: string, termId: string, cols: number, rows: number): Promise<void> {
+    const sub = this.termSubs.get(termId + ':' + sessionId);
+    if (!sub) return;
+    await this.call('terminal.resize', { agentId: sub.sessionId, id: sub.termId, attachmentId: sub.attachId, cols, rows });
+  }
+
+  /** Route a mux item to terminal subscribers (returns true when handled). */
+  routeTerminalItem(streamId: string, value: any): boolean {
+    if (this.termFollows?.has(streamId)) {
+      const reqId = this.termFollows.get(streamId)!;
+      const sub = this.termSubs.get(reqId);
+      if (sub) {
+        const payload = JSON.stringify({ t: 'term:frame', sessionId: sub.sessionId, termId: sub.termId, frame: value });
+        for (const sock of sub.sockets) {
+          try { sock.send(payload); } catch { /* closing */ }
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
   private dropWs(): void {
     this.wsClosed = true;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
@@ -385,6 +479,8 @@ class DshClient {
       this.followMax.clear();
       this.controlStreamId = '';
       this.pendingAsks.clear();
+      this.termSubs.clear();
+      this.termFollows.clear();
       // fail any pending snapshot waiters so history requests don't hang
       for (const [, w] of this.snapshotWaiters) {
         clearTimeout(w.timer);
@@ -527,6 +623,7 @@ class DshClient {
 
   private onStreamItem(streamId: string, value: any): void {
     if (!value || typeof value !== 'object') return;
+    if (this.routeTerminalItem(streamId, value)) return;
     if (streamId === this.controlStreamId) {
       this.onControlItem(value);
       return;

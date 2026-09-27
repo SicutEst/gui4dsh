@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { useI18n } from '../i18n';
 import { Icon } from './Icon';
+import { WebTerminalView } from './WebTerminal';
 
-/** Right panel: lazy workspace file tree + plain-text preview (workspaceFiles RPC). */
+/** Right panel: workspace file tree + plain-text preview + interactive terminal. */
 export function FileSidebar(props: { sessionId: string }) {
   const { t, locale } = useI18n();
   const sid = props.sessionId;
@@ -12,6 +13,7 @@ export function FileSidebar(props: { sessionId: string }) {
   const st = useStore();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [selPath, setSelPath] = useState<string | null>(null);
+  const [tab, setTab] = useState<'files' | 'terminal'>('files');
 
   useEffect(() => {
     if (listings[''] === undefined) void st.listFiles(sid, '');
@@ -66,15 +68,22 @@ export function FileSidebar(props: { sessionId: string }) {
 
   return (
     <div className="file-panel">
+      <div className="fs-tabs">
+        <button className={tab === 'files' ? 'active' : ''} onClick={() => setTab('files')}>
+          <Icon name="folder" size={12} /> {t('files.title')}
+        </button>
+        <button className={tab === 'terminal' ? 'active' : ''} onClick={() => setTab('terminal')}>
+          <Icon name="terminal" size={12} /> {t('term.tab')}
+        </button>
+      </div>
+      {tab === 'files' && (
+      <>
       <div className="fs-head">
         <Icon name="folder" size={13} />
-        <span>{t('files.title')}</span>
+        <span style={{ fontWeight: 400 }}>{locale === 'zh' ? '工作区文件' : 'Workspace files'}</span>
         <div style={{ flex: 1 }} />
         <button className="icon-btn" title={locale === 'zh' ? '刷新' : 'Refresh'} onClick={() => void st.listFiles(sid, '')}>
           <Icon name="refresh" size={13} />
-        </button>
-        <button className="icon-btn" title={t('common.close')} onClick={() => st.toggleFilePanel()}>
-          <Icon name="x" size={13} />
         </button>
       </div>
       <div className="fs-tree">{renderDir('', 0)}</div>
@@ -92,6 +101,9 @@ export function FileSidebar(props: { sessionId: string }) {
           </div>
         </div>
       )}
+      </>
+      )}
+      {tab === 'terminal' && <WebTerminalView sessionId={sid} />}
     </div>
   );
 }

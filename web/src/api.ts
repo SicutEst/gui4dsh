@@ -152,6 +152,31 @@ export const fe = {
 
 export type WsStatus = 'connecting' | 'connected' | 'lost';
 
+let activeWs: WebSocket | null = null;
+let wsMsgListener: ((msg: any) => void) | null = null;
+
+/** Send one uplink message over the gateway WS (terminal bridge etc.). */
+export function wsSend(obj: unknown): boolean {
+  if (activeWs && activeWs.readyState === WebSocket.OPEN) {
+    activeWs.send(JSON.stringify(obj));
+    return true;
+  }
+  return false;
+}
+
+/** Subscribe a listener to raw gateway WS messages (returns unsubscribe). */
+export function onWsMessage(fn: (msg: any) => void): () => void {
+  wsMsgListener = fn;
+  return () => {
+    if (wsMsgListener === fn) wsMsgListener = null;
+  };
+}
+
+/** Current open gateway WS, if any (for terminal bridge consumers). */
+export function getWs(): WebSocket | null {
+  return activeWs;
+}
+
 export function connectWs(onMsg: (msg: any) => void, onStatus: (s: WsStatus) => void): () => void {
   let closed = false;
   let ws: WebSocket | null = null;
@@ -162,19 +187,32 @@ export function connectWs(onMsg: (msg: any) => void, onStatus: (s: WsStatus) => 
     onStatus(attempt === 0 ? 'connecting' : 'lost');
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     ws = new WebSocket(`${proto}://${location.host}/ws?token=${encodeURIComponent(getToken())}`);
+    activeWs = ws;
     ws.onopen = () => {
       attempt = 0;
       onStatus('connected');
     };
     ws.onmessage = (ev) => {
+      let msg: any = null;
       try {
-        onMsg(JSON.parse(String(ev.data)));
+        msg = JSON.parse(String(ev.data));
+      } catch {
+        return;
+      }
+      try {
+        if (wsMsgListener && msg?.t?.startsWith('term:')) wsMsgListener(msg);
+      } catch {
+        /* listener errors are their own */
+      }
+      try {
+        onMsg(msg);
       } catch {
         /* ignore */
       }
     };
     ws.onclose = () => {
       if (closed) return;
+      activeWs = null;
       attempt++;
       setTimeout(connect, Math.min(15000, 600 * attempt));
     };

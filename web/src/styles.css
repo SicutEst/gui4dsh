@@ -837,3 +837,20 @@ textarea.json {
   box-shadow: var(--shadow);
 }
 .chat-jump:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---- file/terminal tabs + web terminal ---- */
+.fs-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.fs-tabs button {
+  flex: 1; padding: 8px 6px; border: none; background: transparent; color: var(--faint);
+  font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
+  border-bottom: 2px solid transparent;
+}
+.fs-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+.wt { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.wt-bar { display: flex; align-items: center; gap: 7px; padding: 6px 10px; font-size: 12px; border-bottom: 1px solid var(--border); }
+.wt-title { font-family: ui-monospace, Menlo, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wt-state { font-size: 10.5px; color: var(--faint); }
+.wt-state.ok { color: #1d8a63; }
+.wt-state.err { color: var(--red, #e05252); }
+.wt-host { flex: 1; min-height: 0; padding: 4px; background: #16181d; }
+.wt-host .xterm { height: 100%; }

@@ -23,7 +23,7 @@ import * as cfd from './cfd.js';
 import * as ddns from './ddns.js';
 import * as acmeTls from './acme.js';
 
-const DSH_METHOD_RE = /^(session|subagent|host|workspace|agentPreset|settings|credentials|llm|goal|skill|command|messageFeedback|workspaceFiles)\.[a-zA-Z]+$/;
+const DSH_METHOD_RE = /^(session|subagent|host|workspace|agentPreset|settings|credentials|llm|goal|skill|command|messageFeedback|workspaceFiles|terminal)\.[a-zA-Z]+$/;
 
 // --- short pairing code (WhatsApp-style): 6 digits, single-use, long-lived until used
 const pairAttempts = new Map<string, number>(); // ip -> count (1-min window)
@@ -172,8 +172,30 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
     for (const frame of snap) socket.send(JSON.stringify({ t: 'dsh:mux', frame }));
     // a stale-empty cache (baseline taken mid-dsh-boot, no traffic since) self-heals here
     if (snap.length === 0) dsh.refreshControl();
-    socket.on('close', () => sockets.delete(socket as unknown as WebSocket));
-    // downlink-only: ignore any client message
+    socket.on('close', () => {
+      sockets.delete(socket as unknown as WebSocket);
+      dsh.terminalUnsubscribe(socket as any);
+    });
+    // uplink: terminal subscribe/unsubscribe/write/resize from web clients
+    socket.on('message', (raw) => {
+      let msg: any;
+      try {
+        msg = JSON.parse(String(raw));
+      } catch {
+        return;
+      }
+      try {
+        if (msg.t === 'term:subscribe' && msg.sessionId && msg.termId) {
+          dsh.terminalSubscribe(socket as any, String(msg.sessionId), String(msg.termId));
+        } else if (msg.t === 'term:unsubscribe') {
+          dsh.terminalUnsubscribe(socket as any, msg.reqId ? String(msg.reqId) : undefined);
+        } else if (msg.t === 'term:write' && msg.sessionId && msg.termId && typeof msg.data === 'string') {
+          void dsh.terminalWrite(String(msg.sessionId), String(msg.termId), msg.data);
+        } else if (msg.t === 'term:resize' && msg.sessionId && msg.termId) {
+          void dsh.terminalResize(String(msg.sessionId), String(msg.termId), Number(msg.cols) || 80, Number(msg.rows) || 24);
+        }
+      } catch { /* malformed uplink ignored */ }
+    });
   });
 
   bus.on((ev) => broadcast({ t: ev.type, ...ev }));
@@ -320,7 +342,7 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
   });
 
   // browser automation (MCP over CDP, registered into cordis.yml)
-  app.get('/api/fe/browser', async () => browser.browserStatus());
+  app.get('/api/fe/browser', async () => ({ ...(browser.browserStatus() as object), termSubs: dsh.debugTermSubs() }));
   app.post('/api/fe/browser/toggle', async (req) => {
     const { enabled } = (req.body || {}) as { enabled?: boolean };
     return browser.setBrowserEnabled(!!enabled);
