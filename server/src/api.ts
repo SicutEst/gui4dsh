@@ -23,7 +23,7 @@ import * as cfd from './cfd.js';
 import * as ddns from './ddns.js';
 import * as acmeTls from './acme.js';
 
-const DSH_METHOD_RE = /^(session|subagent|host|workspace|agentPreset|settings|credentials|llm|goal|skill|command|messageFeedback|workspaceFiles|terminal)\.[a-zA-Z]+$/;
+const DSH_METHOD_RE = /^(session|subagent|host|workspace|agentPreset|settings|credentials|llm|goal|skill|command|messageFeedback|workspaceFiles|terminal|pluginManager|account)\.[a-zA-Z]+$/;
 
 // --- short pairing code (WhatsApp-style): 6 digits, single-use, long-lived until used
 const pairAttempts = new Map<string, number>(); // ip -> count (1-min window)

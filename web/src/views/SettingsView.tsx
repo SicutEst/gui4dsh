@@ -140,8 +140,103 @@ export function SettingsView() {
     return (
       <div className="settings-cards-col">
         <ProvidersCard />
+        <AccountCard />
+        <PluginsCard />
         <BrowserCard />
         <CredsCard />
+      </div>
+    );
+  }
+
+  /** DeepSeek official account card (0.1.7 account controller). */
+  function AccountCard() {
+    const [state, setState] = useState<{ status: string; links?: Record<string, string> } | null>(null);
+    const [busy, setBusy] = useState(false);
+    const load = async () => {
+      const r = await dshCall<{ status: string; links?: Record<string, string> }>('account.getState', {});
+      if (r.ok) setState(r.value!);
+    };
+    useEffect(() => { void load(); }, []);
+    const statusText: Record<string, string> = locale === 'zh'
+      ? { 'credential-stored': '已绑定官方账号', 'anonymous': '未绑定', 'signed-in': '已登录' }
+      : { 'credential-stored': 'Account linked', 'anonymous': 'Not linked', 'signed-in': 'Signed in' };
+    const usageUrl = state?.links?.usageUrl || 'https://platform.deepseek.com/usage';
+    return (
+      <div className="card">
+        <div className="field">
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {t('settings.accountTitle')}
+            <span className={`dot ${state?.status && state.status !== 'anonymous' ? 'ok' : 'bad'}`} style={{ width: 8, height: 8, borderRadius: 4 }} />
+          </label>
+          <p style={{ fontSize: 12, color: 'var(--faint)', margin: '6px 0 10px' }}>{t('settings.accountHint')}</p>
+          {state && (
+            <>
+              <div className="kv" style={{ marginBottom: 8 }}>
+                <span className="k">{t('settings.accountStatus')}</span>
+                <span className="badge">{statusText[state.status] || state.status}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <a className="btn sm" href={usageUrl} target="_blank" rel="noreferrer">
+                  <Icon name="external" size={12} /> {t('settings.accountUsage')}
+                </a>
+                {state.links?.topUpUrl && (
+                  <a className="btn sm" href={state.links.topUpUrl} target="_blank" rel="noreferrer">
+                    <Icon name="external" size={12} /> {t('settings.accountTopUp')}
+                  </a>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /** Plugins card: list + enable/disable via 0.1.7 plugin-manager. */
+  function PluginsCard() {
+    const [rows, setRows] = useState<Array<{ entryId: string; moduleName: string; enabled: boolean; readOnlyReason?: string; meta?: { title?: string; description?: string } }> | null>(null);
+    const [busy, setBusy] = useState<string | null>(null);
+    const load = async () => {
+      const r = await dshCall<Array<{ entryId: string; moduleName: string; enabled: boolean; readOnlyReason?: string; meta?: { title?: string; description?: string } }>>('pluginManager.listPlugins', {});
+      if (r.ok) setRows(r.value || []);
+    };
+    useEffect(() => { void load(); }, []);
+    const toggle = async (entryId: string, enabled: boolean) => {
+      setBusy(entryId);
+      const r = await dshCall('pluginManager.setPluginEnabled', { id: entryId, enabled });
+      if (!r.ok) st.toast('error', r.error?.message || 'failed');
+      await load();
+      setBusy(null);
+    };
+    const userRows = (rows || []).filter((r) => !r.readOnlyReason && r.entryId);
+    const visibleRows = userRows.filter((r) => !r.moduleName.startsWith('cordis:')).slice(0, 40);
+    return (
+      <div className="card">
+        <div className="field">
+          <label>{t('settings.pluginsTitle')}</label>
+          <p style={{ fontSize: 12, color: 'var(--faint)', margin: '6px 0 10px' }}>{t('settings.pluginsHint')}</p>
+          {rows === null && <div style={{ color: 'var(--faint)' }}>{t('common.loading')}</div>}
+          {userRows.length === 0 && rows !== null && <div style={{ color: 'var(--faint)' }}>{t('settings.pluginsNone')}</div>}
+          {visibleRows.map((r) => (
+            <div key={r.entryId} className="idle-row" style={{ marginBottom: 6 }}>
+              <span className={`dot ${r.enabled ? 'ok' : 'bad'}`} style={{ width: 8, height: 8, borderRadius: 4, flexShrink: 0 }} />
+              <span className="mono" style={{ fontSize: 11, color: 'var(--faint)', flexShrink: 0 }}>{r.entryId}</span>
+              <div style={{ flex: 1 }} />
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={r.enabled}
+                  disabled={busy === r.entryId}
+                  onChange={(e) => void toggle(r.entryId, e.target.checked)}
+                />
+                <span className="track" />
+              </label>
+            </div>
+          ))}
+          {userRows.length > visibleRows.length && (
+            <div style={{ fontSize: 11, color: 'var(--faint)' }}>{t('settings.pluginsMore', { n: userRows.length - visibleRows.length })}</div>
+          )}
+        </div>
       </div>
     );
   }
