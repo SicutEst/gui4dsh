@@ -22,8 +22,8 @@ interface NamespaceView {
 /** Preset catalogue for the add-provider form: mainstream OpenAI-compatible endpoints. */
 const LLM_PRESETS: Array<{ key: string; name: string; id: string; baseURL: string; api: string; models: string; keyPh?: string }> = [
   { key: 'siliconflow', name: '硅基流动 SiliconFlow', id: 'siliconflow', baseURL: 'https://api.siliconflow.cn/v1', api: 'openai-completions', models: 'deepseek-ai/DeepSeek-V3.2-Exp | DeepSeek V3.2\nQwen/Qwen3-235B-A22B | Qwen3 235B\nmoonshotai/Kimi-K2-Instruct | Kimi K2' },
-  { key: 'zhipu', name: '智谱 GLM（开放平台）', id: 'zhipu', baseURL: 'https://open.bigmodel.cn/api/paas/v4', api: 'openai-completions', models: 'glm-4.7 | GLM-4.7\nglm-4.7-flash | GLM-4.7 Flash' },
-  { key: 'moonshot', name: '月之暗面 Kimi', id: 'moonshot', baseURL: 'https://api.moonshot.cn/v1', api: 'openai-completions', models: 'kimi-k2 | Kimi K2\nmoonshot-v1-128k | Moonshot 128K' },
+  { key: 'zhipu', name: '智谱 GLM（开放平台）', id: 'zhipu', baseURL: 'https://open.bigmodel.cn/api/paas/v4', api: 'openai-completions', models: 'glm-5.3 | GLM-5.3\nglm-5.3-flash | GLM-5.3 Flash\nglm-4.7 | GLM-4.7（上一代）' },
+  { key: 'moonshot', name: '月之暗面 Kimi', id: 'moonshot', baseURL: 'https://api.moonshot.cn/v1', api: 'openai-completions', models: 'kimi-k2-thinking | Kimi K2 Thinking\nkimi-k2 | Kimi K2\nkimi-latest | Kimi 最新' },
   { key: 'dashscope', name: '阿里通义千问', id: 'dashscope', baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', api: 'openai-completions', models: 'qwen3-max | Qwen3 Max\nqwen3-plus | Qwen3 Plus' },
   { key: 'deepseek', name: 'DeepSeek 官方', id: 'deepseek-api', baseURL: 'https://api.deepseek.com/v1', api: 'openai-completions', models: 'deepseek-chat | DeepSeek Chat\ndeepseek-reasoner | DeepSeek Reasoner' },
   { key: 'openai', name: 'OpenAI', id: 'openai', baseURL: 'https://api.openai.com/v1', api: 'openai-completions', models: 'gpt-5.2 | GPT-5.2\ngpt-5-mini | GPT-5 mini' },

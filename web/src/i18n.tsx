@@ -52,7 +52,7 @@ const zh: Dict = {
   'settings.llmPresetOther': '其他（手动填写）',
   'settings.llmIdPh': '标识，如 siliconflow',
   'settings.llmKeyPh': 'API Key（会安全存入 dsh 凭证）',
-  'settings.llmModelsPh': '模型列表，每行一个：模型ID | 显示名称\n如 glm-4.7 | GLM-4.7',
+  'settings.llmModelsPh': '模型列表，每行一个：模型ID | 显示名称\n如 glm-5.3 | GLM-5.3',
   'settings.llmAdd': '添加',
   'settings.llmAdded': '已添加，新会话立即可选',
   'settings.llmAddHint': '任何 OpenAI 兼容端点均可（硅基流动/Kimi/Qwen/本地 ollama 等）',
