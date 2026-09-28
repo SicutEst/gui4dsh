@@ -599,6 +599,7 @@ export const useStore = create<AppState>()(
           get().refreshTaskMeta(),
           get().refreshAutomations(),
           get().refreshHooks(),
+          get().refreshTrash(),
         ]);
         mutate((s) => {
           s.booted = true;
