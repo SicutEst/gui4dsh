@@ -45,6 +45,7 @@ export function Sidebar() {
   const mobileDefaultExpanded = window.matchMedia('(max-width: 768px)').matches;
   const sidebarRef = useRef<HTMLElement>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const isWsCollapsed = (id: string): boolean => {
@@ -87,7 +88,7 @@ export function Sidebar() {
     document.body.style.userSelect = 'none';
   };
 
-  const { sessions, workspaces, archived, taskMeta, activeId, view, sidebarOpen, wsStatus, dshStatus, chats } = st;
+  const { sessions, workspaces, archived, taskMeta, activeId, view, sidebarOpen, wsStatus, dshStatus, chats, trash } = st;
 
   // hide blank placeholder sessions and subagent children
   const visible = useMemo(
@@ -202,6 +203,15 @@ export function Sidebar() {
           </button>
           <button title={t('task.archive')} onClick={() => void st.archive(s.sessionId)}>
             <Icon name="archive" size={13} />
+          </button>
+          <button
+            title={t('task.delete')}
+            onClick={() => {
+              if (!window.confirm(t('trash.confirm', { title }))) return;
+              void st.deleteTask(s.sessionId, title);
+            }}
+          >
+            <Icon name="trash" size={13} />
           </button>
         </div>
       </div>
@@ -338,8 +348,45 @@ export function Sidebar() {
           </div>
         )}
 
-        {filtered.length === 0 && (
+        {filtered.length === 0 && trash.length === 0 && (
           <div style={{ padding: '20px 10px', color: 'var(--faint)', fontSize: 12.5 }}>{t('sidebar.noTasks')}</div>
+        )}
+
+        {trash.length > 0 && (
+          <div style={{ marginTop: 10, opacity: 0.75 }}>
+            <div className="task-section-title" style={{ cursor: 'pointer' }} onClick={() => setTrashOpen(!trashOpen)}>
+              <Icon name={trashOpen ? 'chevronDown' : 'chevronRight'} size={12} />
+              <Icon name="trash" size={11} /> {t('trash.title')}
+              <span style={{ color: 'var(--faint)', fontWeight: 400 }}>{trash.length}</span>
+            </div>
+            {trashOpen && trash.map((e) => (
+              <div key={e.id} className="task-row">
+                <span className="t-dot" style={{ background: 'var(--red, #e05252)' }} />
+                <div className="t-body">
+                  <div className="t-title" style={{ opacity: 0.55, textDecoration: 'line-through' }}>{e.title || e.id.slice(8, 18)}</div>
+                  <div className="t-sub">{relTime(e.deletedAt, locale)}</div>
+                </div>
+                <div className="t-menu" onClick={(ev) => ev.stopPropagation()} style={{ display: 'flex' }}>
+                  <button
+                    title={t('trash.restore')}
+                    style={{ border: 'none', background: 'transparent', color: 'var(--dim)', cursor: 'pointer', width: 22, height: 22, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={() => void st.restoreTask(e.id)}
+                  >
+                    <Icon name="refresh" size={13} />
+                  </button>
+                  <button
+                    title={t('trash.purge')}
+                    style={{ border: 'none', background: 'transparent', color: 'var(--red, #e05252)', cursor: 'pointer', width: 22, height: 22, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={() => {
+                      if (window.confirm(t('trash.purgeConfirm'))) void st.purgeTask(e.id);
+                    }}
+                  >
+                    <Icon name="trash" size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

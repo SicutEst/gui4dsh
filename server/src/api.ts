@@ -12,6 +12,7 @@ import * as browser from './browser.js';
 import { store } from './store.js';
 import { bus } from './bus.js';
 import { dsh, dshAuthedGet } from './dsh/client.js';
+import * as trash from './trash.js';
 import * as manager from './dsh/manager.js';
 import * as automations from './automations.js';
 import { testHook } from './hooks.js';
@@ -710,7 +711,43 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
       return reply.code(400).send({ error: `method not allowed: ${method}` });
     }
     const result = await dsh.call(method, req.body ?? {});
+    // recycle-bin: deleted sessions never resurface through any read path
+    if (result.ok && trash.trashList().length > 0) {
+      const value = result.value as Record<string, unknown>;
+      if (method === 'session.list') {
+        const items = value?.items as Array<{ sessionId: string }> | undefined;
+        if (items) value.items = items.filter((i) => !trash.isDeleted(i.sessionId));
+      } else if (method === 'session.search') {
+        const items = (value?.items ?? (value as { results?: Array<{ sessionId: string }> })?.results) as Array<{ sessionId: string }> | undefined;
+        if (items) value.items = items.filter((i) => !trash.isDeleted(i.sessionId));
+      } else if (method === 'workspace.list') {
+        const items = value?.items as Array<{ sessionIds: string[] }> | undefined;
+        if (items) for (const w of items) w.sessionIds = (w.sessionIds || []).filter((i) => !trash.isDeleted(i));
+      }
+    }
     return reply.send(result);
+  });
+
+  // ---------- recycle-bin session deletion ----------
+  app.get('/api/fe/trash', async () => trash.trashList());
+  app.post('/api/fe/trash/delete', async (req, reply) => {
+    const { id, title } = (req.body || {}) as { id?: string; title?: string };
+    if (!id) return reply.code(400).send({ error: 'id required' });
+    // a running session cannot be deleted — its log is being written
+    const list = await dsh.call<{ items: Array<{ sessionId: string; running?: boolean }> }>('session.list', {});
+    const running = (list.ok ? list.value?.items || [] : []).some((s) => s.sessionId === id && s.running);
+    if (running) return reply.code(409).send({ error: '会话正在运行，先停止再删除' });
+    return trash.deleteSession(id, String(title || ''), (list.ok ? list.value?.items || [] : []) as Array<{ sessionId: string; parentSessionId?: string }>);
+  });
+  app.post('/api/fe/trash/restore', async (req, reply) => {
+    const { id } = (req.body || {}) as { id?: string };
+    if (!id) return reply.code(400).send({ error: 'id required' });
+    return trash.restoreSession(id);
+  });
+  app.post('/api/fe/trash/purge', async (req, reply) => {
+    const { id } = (req.body || {}) as { id?: string };
+    if (!id) return reply.code(400).send({ error: 'id required' });
+    return trash.purgeSession(id);
   });
 
   // per-turn workspace file changes: proxy dsh 0.1.7's authenticated summary route

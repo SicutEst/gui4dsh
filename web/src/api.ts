@@ -102,6 +102,13 @@ export const fe = {
     req<{ turn: number; files: Array<{ path: string; display: string; added: number; deleted: number }>; total: number; added: number; deleted: number }>(
       `/api/fe/changes/summary?sessionId=${encodeURIComponent(sessionId)}&seq=${seq}`,
     ),
+  trashList: () => req<Array<{ id: string; title: string; deletedAt: number }>>('/api/fe/trash'),
+  trashDelete: (id: string, title: string) =>
+    req<{ ok: boolean; error?: string }>('/api/fe/trash/delete', { method: 'POST', body: JSON.stringify({ id, title }) }),
+  trashRestore: (id: string) =>
+    req<{ ok: boolean; error?: string }>('/api/fe/trash/restore', { method: 'POST', body: JSON.stringify({ id }) }),
+  trashPurge: (id: string) =>
+    req<{ ok: boolean; error?: string }>('/api/fe/trash/purge', { method: 'POST', body: JSON.stringify({ id }) }),
   duckdnsBind: (token: string, domain: string, ip?: string, ipv6?: string) =>
     req<{ ok: boolean; response?: string; error?: string }>('/api/fe/duckdns/bind', { method: 'POST', body: JSON.stringify({ token, domain, ip, ipv6 }) }),
   duckdnsCheck: (host: string) =>

@@ -375,6 +375,7 @@ interface AppState {
   automations: Automation[];
   automationRuns: AutomationRun[];
   hooks: Hook[];
+  trash: Array<{ id: string; title: string; deletedAt: number }>;
   hookRuns: HookRun[];
   chats: Record<string, ChatState>;
   approvals: Record<string, ApprovalPending>;
@@ -401,6 +402,10 @@ interface AppState {
   refreshTaskMeta: () => Promise<void>;
   refreshAutomations: () => Promise<void>;
   refreshHooks: () => Promise<void>;
+  refreshTrash: () => Promise<void>;
+  deleteTask: (sid: string, title: string) => Promise<boolean>;
+  restoreTask: (id: string) => Promise<void>;
+  purgeTask: (id: string) => Promise<void>;
   refreshSkills: (force?: boolean) => Promise<void>;
   loadModels: (sid: string) => Promise<void>;
   loadOlder: (sid: string) => Promise<void>;
@@ -552,6 +557,7 @@ export const useStore = create<AppState>()(
       automations: [],
       automationRuns: [],
       hooks: [],
+      trash: [],
       hookRuns: [],
       chats: {},
       approvals: {},
@@ -572,6 +578,7 @@ export const useStore = create<AppState>()(
           get().refreshTaskMeta(),
           get().refreshAutomations(),
           get().refreshHooks(),
+          get().refreshTrash(),
         ]);
         // re-pull the open conversation so messages sent elsewhere appear —
         // silently: a focus/visibility resync must never hijack the current view
@@ -727,6 +734,41 @@ export const useStore = create<AppState>()(
           s.hooks = r.hooks || [];
           s.hookRuns = r.runs || [];
         });
+      },
+
+      refreshTrash: async () => {
+        const r = await fe.trashList();
+        if (Array.isArray(r)) mutate((s) => void (s.trash = r));
+      },
+
+      deleteTask: async (sid, title) => {
+        const r = await fe.trashDelete(sid, title);
+        if (!r.ok) {
+          get().toast('error', r.error || 'delete failed');
+          return false;
+        }
+        mutate((s) => {
+          s.sessions = s.sessions.filter((x) => x.sessionId !== sid);
+          if (s.activeId === sid) s.activeId = null;
+        });
+        await get().refreshTrash();
+        // dsh recycles to apply the deletion — resync once it is back
+        setTimeout(() => void get().refreshSessions(), 15000);
+        return true;
+      },
+
+      restoreTask: async (id) => {
+        const r = await fe.trashRestore(id);
+        if (!r.ok) get().toast('error', r.error || 'restore failed');
+        await get().refreshTrash();
+        // dsh recycles to pick up the restored log — refresh once it is back
+        setTimeout(() => void get().refreshSessions(), 15000);
+      },
+
+      purgeTask: async (id) => {
+        const r = await fe.trashPurge(id);
+        if (!r.ok) get().toast('error', r.error || 'purge failed');
+        await get().refreshTrash();
       },
 
       refreshSkills: async (force) => {
