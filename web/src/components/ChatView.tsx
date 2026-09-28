@@ -349,13 +349,20 @@ export function ChatView() {
             )}
           </div>
         )}
-        <button
-          className={`btn sm ${showTraj ? 'primary' : ''}`}
-          onClick={() => setShowTraj(!showTraj)}
-          title={t('traj.title')}
-        >
-          <Icon name="activity" size={13} />
-        </button>
+        <div className="view-switch">
+          <button
+            className={!showTraj ? 'active' : ''}
+            onClick={() => setShowTraj(false)}
+          >
+            <Icon name="chat" size={12} /> {t('traj.tabChat')}
+          </button>
+          <button
+            className={showTraj ? 'active' : ''}
+            onClick={() => setShowTraj(true)}
+          >
+            <Icon name="activity" size={12} /> {t('traj.title')}
+          </button>
+        </div>
         <button
           className={`btn sm ${showReasoning ? 'primary' : ''}`}
           onClick={() => setShowReasoning(!showReasoning)}

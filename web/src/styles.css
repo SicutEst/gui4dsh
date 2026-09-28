@@ -854,3 +854,15 @@ textarea.json {
 .wt-state.err { color: var(--red, #e05252); }
 .wt-host { flex: 1; min-height: 0; padding: 4px; background: #16181d; }
 .wt-host .xterm { height: 100%; }
+
+/* ---- chat/trajectory view switch ---- */
+.view-switch {
+  display: flex; border: 1px solid var(--border2); border-radius: 8px; overflow: hidden;
+  flex-shrink: 0;
+}
+.view-switch button {
+  border: none; background: transparent; color: var(--faint); cursor: pointer;
+  padding: 5px 10px; font-size: 12px; display: flex; align-items: center; gap: 5px;
+}
+.view-switch button + button { border-left: 1px solid var(--border); }
+.view-switch button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
