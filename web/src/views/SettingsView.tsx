@@ -131,6 +131,29 @@ export function SettingsView() {
           </div>
         </div>
 
+        <div className="card">
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>{t('settings.desktopSync')}</label>
+            <p style={{ fontSize: 12, color: 'var(--faint)', margin: '6px 0 4px' }}>{t('settings.desktopSyncHint')}</p>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings.desktopSync !== false}
+                onChange={(e) => {
+                  const next = { ...settings, desktopSync: e.target.checked };
+                  setSettings(next);
+                  void fe.saveSettings({ desktopSync: e.target.checked }).then(() => {
+                    setSaved(true);
+                    setTimeout(() => setSaved(false), 1500);
+                  });
+                }}
+              />
+              <span className="track" />
+            </label>
+            {saved && <div className="badge green" style={{ marginLeft: 8 }}>{t('settings.dshSaved')}</div>}
+          </div>
+        </div>
+
         <PushCard settings={settings} onChange={(patch) => setSettings({ ...settings, ...patch } as GatewaySettings)} />
       </div>
     );

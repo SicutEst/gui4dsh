@@ -8,7 +8,7 @@ function defaultStore(): StoreShape {
   return {
     version: 1,
     token: crypto.randomBytes(24).toString('base64url'),
-    settings: { locale: 'zh', theme: 'dark', externalBaseUrl: '', openBrowserOnStart: true, remoteEnabled: true, autoUpdateDsh: true },
+    settings: { locale: 'zh', theme: 'dark', externalBaseUrl: '', openBrowserOnStart: true, remoteEnabled: true, autoUpdateDsh: true, desktopSync: true },
     taskMeta: {},
     taskGroups: [],
     automations: [],

@@ -1094,6 +1094,9 @@ export const useStore = create<AppState>()(
           case 'dsh:host':
             applyHostFrame(msg.frame);
             break;
+          case 'desktop:synced':
+            get().toast('info', '检测到 Desktop 变更，已同步');
+            break;
           case 'dsh:status':
             mutate((s) => void (s.dshStatus = msg.status));
             if (msg.status === 'up') {

@@ -42,6 +42,7 @@ dsh 是 DeepSeek 的 CLI 智能体框架（`@deepseek-ai/dsh`，`npx @deepseek-a
 - **触发器**：会话/回合/自动化事件 → 执行 shell 命令或应用内通知
 - **推送**：Bark（iOS）/ ntfy——任务完成、需要审批时推到手机
 - **远程控制**：token 配对 + 二维码 + 引导式公网访问向导
+- **Desktop 同步**：与 dsh Desktop 共享数据目录时，自动检测 Desktop 的会话/文件夹变更并同步（运行中任务不被打断）
 
 ## 架构
 

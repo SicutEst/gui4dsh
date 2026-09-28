@@ -357,6 +357,7 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
     if (typeof body.openBrowserOnStart === 'boolean') s.openBrowserOnStart = body.openBrowserOnStart;
     if (typeof body.remoteEnabled === 'boolean') s.remoteEnabled = body.remoteEnabled;
     if (typeof body.autoUpdateDsh === 'boolean') s.autoUpdateDsh = body.autoUpdateDsh;
+    if (typeof body.desktopSync === 'boolean') s.desktopSync = body.desktopSync;
     // push notifications (bark / ntfy)
     if (body.pushChannel === 'off' || body.pushChannel === 'bark' || body.pushChannel === 'ntfy') s.pushChannel = body.pushChannel;
     for (const k of ['barkServer', 'barkKey', 'ntfyServer', 'ntfyTopic'] as const) {

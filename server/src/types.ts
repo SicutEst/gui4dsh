@@ -109,6 +109,8 @@ export interface GatewaySettings {
   remoteEnabled: boolean;
   /** Follow the latest @deepseek-ai/dsh on npm (daily check). */
   autoUpdateDsh: boolean;
+  /** Recycle the managed dsh when Desktop changes the shared workspace state. */
+  desktopSync: boolean;
 }
 
 export interface SkillGroup {

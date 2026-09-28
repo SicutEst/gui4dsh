@@ -220,6 +220,7 @@ export interface GatewaySettings {
   openBrowserOnStart: boolean;
   remoteEnabled: boolean;
   autoUpdateDsh?: boolean;
+  desktopSync?: boolean;
   pushChannel?: 'off' | 'bark' | 'ntfy';
   barkServer?: string;
   barkKey?: string;

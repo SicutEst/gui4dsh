@@ -17,6 +17,7 @@ import * as cfd from './cfd.js';
 import * as ddns from './ddns.js';
 import * as acmeTls from './acme.js';
 import { initIdleQueue } from './idle.js';
+import { initDesktopSync } from './desktop-sync.js';
 import { buildServer, getPairCode as apiGetPairCode } from './api.js';
 
 function parseArgs(): { port: number; open: boolean } {
@@ -121,6 +122,7 @@ async function main(): Promise<void> {
   initHooks();
   rebuildAutomations();
   initIdleQueue();
+  initDesktopSync();
   backfillFromProjcache();
   frp.init();
   cfd.init();
