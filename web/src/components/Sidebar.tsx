@@ -358,6 +358,17 @@ export function Sidebar() {
               <Icon name={trashOpen ? 'chevronDown' : 'chevronRight'} size={12} />
               <Icon name="trash" size={11} /> {t('trash.title')}
               <span style={{ color: 'var(--faint)', fontWeight: 400 }}>{trash.length}</span>
+              <div style={{ flex: 1 }} />
+              <button
+                title={t('trash.empty')}
+                style={{ border: 'none', background: 'transparent', color: 'var(--red, #e05252)', cursor: 'pointer', padding: '0 4px', display: 'flex', alignItems: 'center' }}
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  if (window.confirm(t('trash.emptyConfirm'))) void st.emptyTrash();
+                }}
+              >
+                <Icon name="trash" size={11} />
+              </button>
             </div>
             {trashOpen && trash.map((e) => (
               <div key={e.id} className="task-row">

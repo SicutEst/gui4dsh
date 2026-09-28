@@ -109,6 +109,8 @@ export const fe = {
     req<{ ok: boolean; error?: string }>('/api/fe/trash/restore', { method: 'POST', body: JSON.stringify({ id }) }),
   trashPurge: (id: string) =>
     req<{ ok: boolean; error?: string }>('/api/fe/trash/purge', { method: 'POST', body: JSON.stringify({ id }) }),
+  trashEmpty: () =>
+    req<{ ok: boolean; purged: number }>('/api/fe/trash/empty', { method: 'POST', body: '{}' }),
   duckdnsBind: (token: string, domain: string, ip?: string, ipv6?: string) =>
     req<{ ok: boolean; response?: string; error?: string }>('/api/fe/duckdns/bind', { method: 'POST', body: JSON.stringify({ token, domain, ip, ipv6 }) }),
   duckdnsCheck: (host: string) =>

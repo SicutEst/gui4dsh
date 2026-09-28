@@ -406,6 +406,7 @@ interface AppState {
   deleteTask: (sid: string, title: string) => Promise<boolean>;
   restoreTask: (id: string) => Promise<void>;
   purgeTask: (id: string) => Promise<void>;
+  emptyTrash: () => Promise<void>;
   refreshSkills: (force?: boolean) => Promise<void>;
   loadModels: (sid: string) => Promise<void>;
   loadOlder: (sid: string) => Promise<void>;
@@ -768,6 +769,12 @@ export const useStore = create<AppState>()(
       purgeTask: async (id) => {
         const r = await fe.trashPurge(id);
         if (!r.ok) get().toast('error', r.error || 'purge failed');
+        await get().refreshTrash();
+      },
+
+      emptyTrash: async () => {
+        const r = await fe.trashEmpty();
+        if (!r.ok) get().toast('error', 'empty failed');
         await get().refreshTrash();
       },
 

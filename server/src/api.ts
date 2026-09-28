@@ -744,6 +744,7 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
     if (!id) return reply.code(400).send({ error: 'id required' });
     return trash.restoreSession(id);
   });
+  app.post('/api/fe/trash/empty', async () => trash.emptyTrash());
   app.post('/api/fe/trash/purge', async (req, reply) => {
     const { id } = (req.body || {}) as { id?: string };
     if (!id) return reply.code(400).send({ error: 'id required' });
