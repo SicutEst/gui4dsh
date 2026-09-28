@@ -866,3 +866,13 @@ textarea.json {
 }
 .view-switch button + button { border-left: 1px solid var(--border); }
 .view-switch button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+/* ---- user message edit ---- */
+.msg-edit-btn {
+  border: none; background: transparent; color: var(--faint); cursor: pointer;
+  font-size: 11px; padding: 1px 5px; border-radius: 5px; margin-left: 6px;
+  display: inline-flex; align-items: center; gap: 3px; opacity: 0;
+  transition: opacity 0.12s;
+}
+.msg:hover .msg-edit-btn { opacity: 1; }
+.msg-edit-btn:hover { color: var(--accent); background: var(--accent-soft); }

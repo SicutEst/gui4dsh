@@ -100,7 +100,7 @@ function newChat(): ChatState {
   };
 }
 
-function itemText(item: ChatItem): string {
+export function itemText(item: ChatItem): string {
   return (item.message?.content || []).filter((b) => b.type === 'text').map((b) => b.text || '').join('\n');
 }
 
@@ -404,6 +404,7 @@ interface AppState {
   refreshHooks: () => Promise<void>;
   refreshTrash: () => Promise<void>;
   deleteTask: (sid: string, title: string) => Promise<boolean>;
+  editAndResend: (sid: string, atSeq: number, newText: string) => Promise<boolean>;
   restoreTask: (id: string) => Promise<void>;
   purgeTask: (id: string) => Promise<void>;
   emptyTrash: () => Promise<void>;
@@ -741,6 +742,29 @@ export const useStore = create<AppState>()(
       refreshTrash: async () => {
         const r = await fe.trashList();
         if (Array.isArray(r)) mutate((s) => void (s.trash = r));
+      },
+
+      editAndResend: async (sid, atSeq, newText) => {
+        const r = await fe.editTruncate(sid, atSeq);
+        if (!r.ok) {
+          get().toast('error', (r as any).error || 'edit failed');
+          return false;
+        }
+        // dsh recycled to apply the truncation — wait for it, reopen, resend
+        for (let i = 0; i < 30; i++) {
+          await new Promise((res) => setTimeout(res, 3000));
+          try {
+            const h = await fe.health();
+            if (h.dsh === 'up' && h.uptime > 5) {
+              await get().openSession(sid);
+              await get().sendMessage(sid, newText);
+              get().toast('success', '已按修改后的内容重新回答');
+              return true;
+            }
+          } catch { /* still recycling */ }
+        }
+        get().toast('error', '引擎刷新超时，请稍后手动发送');
+        return false;
       },
 
       deleteTask: async (sid, title) => {

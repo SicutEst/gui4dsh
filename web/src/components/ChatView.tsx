@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useStore, type AttachmentDraft } from '../store';
+import { useStore, itemText, type AttachmentDraft } from '../store';
 import { useI18n, relTime } from '../i18n';
 import { dshCall } from '../api';
 import { AssistantMessageView, ContextRow, StreamingView, ToolCard, UserBubble } from './blocks';
@@ -51,6 +51,9 @@ export function ChatView() {
   const [jobsOpen, setJobsOpen] = useState(false);
   const [jobTick, setJobTick] = useState(0);
   const [schedOpen, setSchedOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<{ seq: number; text: string } | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
 
   useEffect(() => {
     if (!jobsOpen) return;
@@ -428,6 +431,18 @@ export function ChatView() {
                 <div className="msg-role">
                   <Icon name="user" size={12} /> {locale === 'zh' ? '你' : 'You'}
                   {item.optimistic && <span style={{ color: 'var(--faint)', fontWeight: 400 }}>…</span>}
+                  {!item.optimistic && !running && item.seq > 0 && (
+                    <button
+                      className="msg-edit-btn"
+                      title={t('edit.title')}
+                      onClick={() => {
+                        setEditText(itemText(item));
+                      setEditTarget({ seq: item.seq, text: itemText(item) });
+                      }}
+                    >
+                      <Icon name="pencil" size={11} /> {t('edit.resend')}
+                    </button>
+                  )}
                 </div>
                 <UserBubble item={item} sessionId={activeId} />
               </div>
@@ -831,6 +846,38 @@ export function ChatView() {
       </div>
       {st.filePanel && activeId && <FileSidebar sessionId={activeId} />}
       </div>
+
+      {editTarget && (
+        <div className="modal-overlay" onClick={() => setEditTarget(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: 'min(92vw, 640px)' }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('edit.title')}</div>
+            <p style={{ fontSize: 12, color: 'var(--faint)', margin: '0 0 10px' }}>{t('edit.warn')}</p>
+            <textarea
+              className="input"
+              style={{ minHeight: 140, resize: 'vertical', fontSize: 13 }}
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => setEditTarget(null)}>{t('common.cancel')}</button>
+              <button
+                className="btn primary"
+                disabled={!editText.trim() || editBusy}
+                onClick={async () => {
+                  if (!activeId || !editTarget) return;
+                  setEditBusy(true);
+                  const ok = await st.editAndResend(activeId, editTarget.seq, editText.trim());
+                  setEditBusy(false);
+                  if (ok) setEditTarget(null);
+                }}
+              >
+                {editBusy ? t('common.loading') : t('edit.send')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

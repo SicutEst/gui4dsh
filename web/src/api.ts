@@ -102,6 +102,8 @@ export const fe = {
     req<{ turn: number; files: Array<{ path: string; display: string; added: number; deleted: number }>; total: number; added: number; deleted: number }>(
       `/api/fe/changes/summary?sessionId=${encodeURIComponent(sessionId)}&seq=${seq}`,
     ),
+  editTruncate: (id: string, atSeq: number) =>
+    req<{ ok: boolean; verified?: boolean; error?: string }>('/api/fe/session/edit-truncate', { method: 'POST', body: JSON.stringify({ id, atSeq }) }),
   trashList: () => req<Array<{ id: string; title: string; deletedAt: number }>>('/api/fe/trash'),
   trashDelete: (id: string, title: string) =>
     req<{ ok: boolean; error?: string }>('/api/fe/trash/delete', { method: 'POST', body: JSON.stringify({ id, title }) }),

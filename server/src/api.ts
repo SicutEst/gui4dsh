@@ -13,6 +13,7 @@ import { store } from './store.js';
 import { bus } from './bus.js';
 import { dsh, dshAuthedGet } from './dsh/client.js';
 import * as trash from './trash.js';
+import * as editor from './editor.js';
 import * as manager from './dsh/manager.js';
 import * as automations from './automations.js';
 import { testHook } from './hooks.js';
@@ -730,6 +731,34 @@ export async function buildServer(port: number, httpsOpts?: { key: Buffer; cert:
   });
 
   // ---------- recycle-bin session deletion ----------
+  // in-place message edit: truncate the log before a past user message so the
+  // gui can re-send a corrected version (ZCode-style edit semantics); the
+  // edited log is verified after the dsh restart and auto-restored on failure
+  app.post('/api/fe/session/edit-truncate', async (req, reply) => {
+    const { id, atSeq } = (req.body || {}) as { id?: string; atSeq?: number };
+    if (!id || typeof atSeq !== 'number') return reply.code(400).send({ error: 'id and atSeq required' });
+    const list = await dsh.call<{ items: Array<{ sessionId: string; running?: boolean }> }>('session.list', {});
+    const running = (list.ok ? list.value?.items || [] : []).some((s) => s.sessionId === id && s.running);
+    if (running) return reply.code(409).send({ error: '会话正在运行，无法编辑历史' });
+    const r = editor.truncateAtUserMessage(id, atSeq);
+    if (!r.ok) return reply.code(400).send({ error: r.error, backup: r.backup });
+    let verified = false;
+    for (let i = 0; i < 20; i++) {
+      await new Promise((res) => setTimeout(res, 3000));
+      try {
+        const hb = await fetch('http://127.0.0.1:34180/', { signal: AbortSignal.timeout(2000) });
+        if (hb.status !== 200 && hb.status !== 401) continue;
+      } catch { continue; }
+      const hist = await dsh.call('session.history', { sessionId: id, maxMessages: 2 });
+      if (hist.ok) { verified = true; break; }
+      if (hist.error && /corrupt|invalid/i.test(hist.error.message || '')) break;
+    }
+    if (!verified && r.backup) {
+      editor.restoreBackup(id, r.backup);
+      return reply.code(500).send({ error: '编辑后的日志未通过验证，已自动还原原始日志', backup: r.backup });
+    }
+    return { ok: true, verified };
+  });
   app.get('/api/fe/trash', async () => trash.trashList());
   app.post('/api/fe/trash/delete', async (req, reply) => {
     const { id, title } = (req.body || {}) as { id?: string; title?: string };
